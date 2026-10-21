@@ -1,0 +1,108 @@
+# Whit Fitness: search engines and AI assistants are welcome to read and cite this site.
+
+User-agent: Googlebot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: Applebot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: GPTBot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: Claude-User
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: Perplexity-User
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: Meta-ExternalAgent
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: Amazonbot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: cohere-ai
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: MistralAI-User
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: YouBot
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+User-agent: *
+Allow: /
+Disallow: /_shots/
+Disallow: /_mobile/
+
+Sitemap: https://whit-fitness.com/sitemap.xml

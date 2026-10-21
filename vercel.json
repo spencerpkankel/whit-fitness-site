@@ -1,0 +1,214 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/home-page-new",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/programs",
+      "destination": "/#programs",
+      "permanent": true
+    },
+    {
+      "source": "/community",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/eugene-barbell",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/about",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/about-new",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/our-team",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/schedule-and-pricing",
+      "destination": "/schedule",
+      "permanent": true
+    },
+    {
+      "source": "/schedule-pricing",
+      "destination": "/schedule",
+      "permanent": true
+    },
+    {
+      "source": "/personaltraining",
+      "destination": "/personal-training",
+      "permanent": true
+    },
+    {
+      "source": "/personal-training-with-opex",
+      "destination": "/personal-training",
+      "permanent": true
+    },
+    {
+      "source": "/contact-us",
+      "destination": "/contact",
+      "permanent": true
+    },
+    {
+      "source": "/our-facility",
+      "destination": "/#facility",
+      "permanent": true
+    },
+    {
+      "source": "/atp",
+      "destination": "/youth",
+      "permanent": true
+    },
+    {
+      "source": "/atp-checkout",
+      "destination": "/youth",
+      "permanent": true
+    },
+    {
+      "source": "/advanced-training-performance",
+      "destination": "/youth",
+      "permanent": true
+    },
+    {
+      "source": "/s/ATP-class-schedule.png",
+      "destination": "/youth",
+      "permanent": true
+    },
+    {
+      "source": "/scheduling-an-onramp",
+      "destination": "/start",
+      "permanent": true
+    },
+    {
+      "source": "/calorie-conversion-app",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/membership-cancellation",
+      "destination": "/faq#cancel",
+      "permanent": true
+    },
+    {
+      "source": "/membership-pause",
+      "destination": "/faq#cancel",
+      "permanent": true
+    },
+    {
+      "source": "/cart",
+      "destination": "/shop",
+      "permanent": true
+    },
+    {
+      "source": "/store",
+      "destination": "/shop",
+      "permanent": true
+    },
+    {
+      "source": "/merch",
+      "destination": "/shop",
+      "permanent": true
+    },
+    {
+      "source": "/coaches",
+      "destination": "/",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/fonts/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/_shots/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/assets/img/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/llms(.*).txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/_mobile/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        }
+      ]
+    }
+  ]
+}
