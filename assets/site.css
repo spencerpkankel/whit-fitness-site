@@ -712,3 +712,24 @@ section.dark[aria-labelledby="start-title"] { padding-top: clamp(2rem, 4vw, 3.5r
 .quotes figcaption { font-size: 0.92rem; color: var(--muted); font-weight: 600; }
 .youth-page .tone-paper .price-list, .youth-page .tone-paper .steps { background: transparent; }
 @media (prefers-reduced-motion: no-preference) { html:has(.youth-page) { scroll-behavior: smooth; } }
+
+/* ATP: expandable story / sample cards */
+.xcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 1.25rem; align-items: start; }
+.xcard { border: 2px solid var(--ink); background: #fff; }
+.xcard summary { list-style: none; cursor: pointer; padding: 1.5rem 1.5rem 1.25rem; display: block; position: relative; }
+.xcard summary::-webkit-details-marker { display: none; }
+.xcard summary:focus-visible { outline: 3px solid var(--forest); outline-offset: 2px; }
+.xcard-kicker { display: block; font-size: 0.85rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--forest); margin-bottom: .35rem; }
+.xcard summary h2 { margin: 0 0 .5rem; padding-right: 2.5rem; font-size: var(--step-2); }
+.xcard summary h2::after { display: none; }
+.xcard summary p { margin: 0 0 .9rem; color: var(--muted); }
+.xcard-more { display: inline-flex; align-items: center; gap: .5rem; font-weight: 700; font-size: .95rem; color: var(--ink); }
+.xcard-more::before { content: "Read more"; }
+.xcard[open] .xcard-more::before { content: "Show less"; }
+.xcard summary::after { content: ""; position: absolute; top: 1.75rem; right: 1.5rem; width: 12px; height: 12px; border-right: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink); transform: rotate(45deg); transition: transform .2s; }
+.xcard[open] summary::after { transform: rotate(-135deg); top: 2rem; }
+.xcard summary:hover .xcard-more { text-decoration: underline; }
+.xcard-body { padding: 0 1.5rem 1.5rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+.xcard-body > p:last-child { margin-bottom: 0; }
+@media (prefers-reduced-motion: no-preference) { .xcard[open] .xcard-body { animation: xcard-in .25s ease; } }
+@keyframes xcard-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
