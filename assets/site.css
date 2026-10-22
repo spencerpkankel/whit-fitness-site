@@ -818,6 +818,6 @@ section.dark[aria-labelledby="start-title"] { padding-top: clamp(2rem, 4vw, 3.5r
 .wb-halo circle { fill: rgba(255,255,255,.9); stroke-width: 3.5; }
 .wb-hit { pointer-events: all; cursor: pointer; }
 .wb-stars { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linecap: round; }
-@media (max-width: 600px) { .wb-buddy { width: 50px; height: 103px; } }
+@media (max-width: 600px) { .wb-buddy { width: 50px; height: 103px; bottom: calc(max(8px, env(safe-area-inset-bottom)) + 72px); } }
 body:has(.mobile-nav[data-open="true"]) .wb-buddy { display: none; }
 @media print { .wb-buddy { display: none; } }
