@@ -220,37 +220,46 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
   wrap.className = "wb-buddy"; wrap.setAttribute("aria-hidden", "true");
   wrap.innerHTML =
     '<svg viewBox="0 -46 70 144" focusable="false">' +
-      '<g class="wb-halo"><line x1="14" y1="93.5" x2="66" y2="93.5"/><line x1="62" y1="-44" x2="62" y2="93.5"/><path class="wb-body-h" d=""/><circle class="wb-head-h" r="5.2"/><circle class="wb-ball-h" r="5.6"/></g>' +
+      '<g class="wb-halo"><line class="wb-floor-h" x1="14" y1="93.5" x2="66" y2="93.5"/><line x1="62" y1="-44" x2="62" y2="93.5"/></g>' +
       '<line class="wb-floor" x1="14" y1="93.5" x2="66" y2="93.5"/>' +
       '<line class="wb-wall" x1="62" y1="-44" x2="62" y2="93.5"/>' +
       '<line class="wb-target" x1="58" y1="-33" x2="62" y2="-33"/>' +
-      '<path class="wb-body" d=""/>' +
-      '<circle class="wb-head" r="5.2"/>' +
-      '<circle class="wb-ball" r="5.6"/>' +
+      '<g class="wb-fig"><g class="wb-halo"><path class="wb-body-h" d=""/><circle class="wb-head-h" r="5.2"/></g>' +
+        '<path class="wb-body" d=""/><circle class="wb-head" r="5.2"/></g>' +
+      '<g class="wb-halo"><circle class="wb-ball-h" r="5.6"/></g><circle class="wb-ball" r="5.6"/>' +
+      '<g class="wb-stars" opacity="0"><path d="M0 -4V4M-4 0H4M-2.8 -2.8L2.8 2.8M-2.8 2.8L2.8 -2.8"/></g>' +
+      '<rect class="wb-hit" x="18" y="-46" width="50" height="142" fill="transparent"/>' +
     '</svg>';
   document.body.appendChild(wrap);
   var q = function (c) { return wrap.querySelector(c); };
   var body = q(".wb-body"), head = q(".wb-head"), ball = q(".wb-ball"), bodyH = q(".wb-body-h"), headH = q(".wb-head-h"), ballH = q(".wb-ball-h");
+  var fig = q(".wb-fig"), stars = q(".wb-stars"), floor = q(".wb-floor"), floorH = q(".wb-floor-h");
 
   // Joint angles in degrees: 0 = straight up, positive = toward the wall (right).
   // [shin, thigh, torso, upperArm, forearm]
   var STAND = [0, 0, 2, 150, 20];
-  var SQUAT = [32, -78, 32, 120, -10];
+  var SQUAT = [36, -106, 40, 112, -18];   // hips below the knees (below parallel)
   var THROW = [-4, 2, -2, 14, 6];
+  var FLAIL = [0, 0, -4, 96, 70];       // arms reach up toward the sky once he's on his back
   var L = { shin: 19, thigh: 19, torso: 23, upper: 11, fore: 10.5 };
-  var ANK = [39.5, 92];                 // closer to the wall
-  var TARGET = [56, -33];               // higher throw
-  var REP_PX = 420;                     // pixels of scrolling per rep
+  var ANK = [39.5, 92];
+  var TARGET = [56, -33];
+  var REP_PX = 420;
+  var FALL = -84;                       // degrees he tips over backwards when knocked down
 
   function dir(a) { var r = a * Math.PI / 180; return [Math.sin(r), -Math.cos(r)]; }
   function add(p, a, len) { var d = dir(a); return [p[0] + d[0] * len, p[1] + d[1] * len]; }
   function lerp(a, b, t) { return a + (b - a) * t; }
+  function lerp2(a, b, t) { return [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]; }
   function mix(A, B, t) { return A.map(function (v, i) { return lerp(v, B[i], t); }); }
   function ease(t) { return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
   function easeIn(t) { return t * t; }
   function easeOut(t) { return 1 - (1 - t) * (1 - t); }
-  // Catch flows straight into the next squat: easeIn into "stand" at the end of a rep and easeOut
-  // out of it at the start of the next, so there is no pause at the top between reps.
+  function clamp01(t) { return t < 0 ? 0 : t > 1 ? 1 : t; }
+  function rotAround(pt, deg) {
+    var r = deg * Math.PI / 180, dx = pt[0] - ANK[0], dy = pt[1] - ANK[1];
+    return [ANK[0] + dx * Math.cos(r) - dy * Math.sin(r), ANK[1] + dx * Math.sin(r) + dy * Math.cos(r)];
+  }
   function pose(p) {
     if (p < .28) return mix(STAND, SQUAT, easeOut(p / .28));
     if (p < .46) return mix(SQUAT, THROW, ease((p - .28) / .18));
@@ -258,27 +267,75 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
     return mix(THROW, STAND, easeIn((p - .78) / .22));
   }
   function set(el, a, v) { el.setAttribute(a, v); }
-  function draw(p) {
-    var a = pose(p);
+  function geom(a) {
     var knee = add(ANK, a[0], L.shin), hip = add(knee, a[1], L.thigh), neck = add(hip, a[2], L.torso), sh = add(hip, a[2], L.torso - 4.5);
     var elb = add(sh, a[3], L.upper), hand = add(elb, a[4], L.fore), hc = add(neck, a[2], 5.6);
-    var d = "M" + (ANK[0] + 5) + " " + ANK[1] + "H" + ANK[0] + "L" + knee + "L" + hip + "L" + neck + "M" + sh + "L" + elb + "L" + hand;
-    set(body, "d", d); set(bodyH, "d", d);
-    set(head, "cx", hc[0]); set(head, "cy", hc[1]); set(headH, "cx", hc[0]); set(headH, "cy", hc[1]);
-    var bx = hand[0] + 3.5, by = hand[1] - 2;
-    if (p >= .46 && p < .78) {
-      // projectile: height follows a parabola (fast off the hands, slows at the apex, speeds up coming down)
-      var t = (p - .46) / .32, arc = 1 - Math.pow(2 * t - 1, 2), out = 1 - Math.abs(2 * t - 1);
-      bx = lerp(bx, TARGET[0], out); by = lerp(by, TARGET[1], arc);
-    }
-    bx = bx.toFixed(2); by = by.toFixed(2);
-    set(ball, "cx", bx); set(ball, "cy", by); set(ballH, "cx", bx); set(ballH, "cy", by);
+    return { d: "M" + (ANK[0] + 5) + " " + ANK[1] + "H" + ANK[0] + "L" + knee + "L" + hip + "L" + neck + "M" + sh + "L" + elb + "L" + hand,
+             head: hc, hand: [hand[0] + 3.5, hand[1] - 2] };
   }
+  function ballFor(p, hand) {
+    if (p >= .46 && p < .78) {
+      var t = (p - .46) / .32, arc = 1 - Math.pow(2 * t - 1, 2), out = 1 - Math.abs(2 * t - 1);
+      return [lerp(hand[0], TARGET[0], out), lerp(hand[1], TARGET[1], arc)];
+    }
+    return hand;
+  }
+  function paint(a, bpos, rot) {
+    var g = geom(a);
+    set(body, "d", g.d); set(bodyH, "d", g.d);
+    set(head, "cx", g.head[0]); set(head, "cy", g.head[1]); set(headH, "cx", g.head[0]); set(headH, "cy", g.head[1]);
+    set(fig, "transform", rot ? "rotate(" + rot.toFixed(2) + " " + ANK[0] + " " + ANK[1] + ")" : "");
+    var bx = bpos[0].toFixed(2), by = bpos[1].toFixed(2);
+    set(ball, "cx", bx); set(ball, "cy", by); set(ballH, "cx", bx); set(ballH, "cy", by);
+    return g;
+  }
+  function scrollPhase() { return ((window.pageYOffset / REP_PX) % 1 + 1) % 1; }
+  function draw(p) { var a = pose(p); paint(a, ballFor(p, geom(a).hand), 0); }
 
-  // Locked to page position: the pose is a pure function of how far down the page you are.
-  // Stop scrolling and he freezes; scroll back up and the rep rewinds. Draws at most once per frame.
-  var queued = false;
-  function render() { queued = false; draw(((window.pageYOffset / REP_PX) % 1 + 1) % 1); }
+  // ---- scroll lock ----
+  var queued = false, knocked = false;
+  function render() { queued = false; if (!knocked) draw(scrollPhase()); }
   render();
   window.addEventListener("scroll", function () { if (!queued) { queued = true; requestAnimationFrame(render); } }, { passive: true });
+
+  // ---- click: knocked over, bonked by the ball, gets back up ----
+  function knockout() {
+    if (knocked) return;
+    knocked = true;
+    var p0 = scrollPhase(), a0 = pose(p0), b0 = ballFor(p0, geom(a0).hand);
+    var headDown = rotAround(geom(FLAIL).head, FALL);              // where his head lands
+    var bonk = [headDown[0] + 1, headDown[1] - 10.6];              // ball touching the top of his head
+    var apex = [lerp(b0[0], bonk[0], .45), Math.min(b0[1], bonk[1]) - 34];
+    var rest = [bonk[0] - 16, ANK[1] - 4.1];                       // ball bounces off his head, away from him
+    var bounceTop = [lerp(bonk[0], rest[0], .4), bonk[1] - 12];
+    var t0 = performance.now();
+    set(floor, "x1", -40); set(floorH, "x1", -40);
+    function step(now) {
+      var t = (now - t0) / 1000, a, rot = 0, bp, s = 0;
+      // body: tip over (0-.45s), lie there (.45-1.45), get up (1.45-2.05), settle into the scroll pose (2.05-2.45)
+      if (t < .45) { var k = easeIn(t / .45); a = mix(a0, FLAIL, ease(clamp01(t / .3))); rot = FALL * k; }
+      else if (t < 1.45) { a = FLAIL; rot = FALL + Math.sin((t - .45) * 9) * Math.max(0, 1.5 - (t - .45) * 3); }
+      else if (t < 2.05) { var u = ease((t - 1.45) / .6); a = mix(FLAIL, STAND, u); rot = FALL * (1 - u); }
+      else { a = mix(STAND, pose(scrollPhase()), ease(clamp01((t - 2.05) / .4))); }
+      // ball: pops up out of his hands, falls onto his head, bounces off to the floor, comes back to his hands
+      if (t < .5) bp = [lerp(b0[0], apex[0], t / .5), lerp(b0[1], apex[1], easeOut(t / .5))];
+      else if (t < .9) { var f = (t - .5) / .4; bp = [lerp(apex[0], bonk[0], f), lerp(apex[1], bonk[1], easeIn(f))]; }
+      else if (t < 1.35) { var g2 = (t - .9) / .45, x = lerp(bonk[0], rest[0], g2);
+        bp = [x, g2 < .4 ? lerp(bonk[1], bounceTop[1], easeOut(g2 / .4)) : lerp(bounceTop[1], rest[1], easeIn((g2 - .4) / .6))]; }
+      else if (t < 1.65) bp = rest;
+      else if (t < 2.05) bp = lerp2(rest, geom(a).hand, ease((t - 1.65) / .4));
+      else bp = ballFor(pose(scrollPhase()), geom(a).hand);
+      if (t >= 2.05) { var pp = scrollPhase(), hd = geom(a).hand; bp = lerp2(hd, ballFor(pp, hd), ease(clamp01((t - 2.05) / .4))); }
+      paint(a, bp, rot);
+      // stars after the bonk
+      if (t > .9 && t < 1.75) { s = t < 1.05 ? (t - .9) / .15 : 1 - (t - 1.05) / .7;
+        var ang = (t - .9) * 300;
+        set(stars, "transform", "translate(" + (headDown[0] + 2).toFixed(2) + " " + (headDown[1] - 9).toFixed(2) + ") rotate(" + ang.toFixed(1) + ") scale(" + (1.1 + 0.6 * s).toFixed(2) + ")"); }
+      set(stars, "opacity", Math.max(0, Math.min(1, s)).toFixed(2));
+      if (t < 2.45) requestAnimationFrame(step);
+      else { set(floor, "x1", 14); set(floorH, "x1", 14); set(stars, "opacity", 0); knocked = false; render(); }
+    }
+    requestAnimationFrame(step);
+  }
+  q(".wb-hit").addEventListener("click", knockout);
 })();

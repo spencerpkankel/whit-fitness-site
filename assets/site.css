@@ -816,6 +816,8 @@ section.dark[aria-labelledby="start-title"] { padding-top: clamp(2rem, 4vw, 3.5r
 .wb-halo { fill: none; stroke: rgba(255,255,255,.9); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
 .wb-halo .wb-body-h { stroke-width: 8.5; }
 .wb-halo circle { fill: rgba(255,255,255,.9); stroke-width: 3.5; }
+.wb-hit { pointer-events: all; cursor: pointer; }
+.wb-stars { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linecap: round; }
 @media (max-width: 600px) { .wb-buddy { width: 50px; height: 103px; } }
 body:has(.mobile-nav[data-open="true"]) .wb-buddy { display: none; }
 @media print { .wb-buddy { display: none; } }
