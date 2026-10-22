@@ -47,44 +47,105 @@
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
-  // ---- Today board (home) ----
+  // ---- Today board (home): collapsed = next few classes; expanded = pick any day this week ----
   var board = document.querySelector("[data-board]");
   if (board && SCHEDULE.length) {
     var now = gymNow();
     var list = board.querySelector("[data-board-list]");
     var dayEl = board.querySelector("[data-board-day]");
     var foot = board.querySelector("[data-board-foot]");
+    var SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    var COLLAPSED = 3;
     var isClass = function (x) { return x.p !== "open" && x.p !== "childcare"; };
     var classesOn = function (d) { return SCHEDULE.filter(function (x) { return x.d === d && isClass(x); }); };
+    var isPast = function (x, d) { return d === now.day && toMin(x.t) + (x.dur || 60) <= now.min; };
 
-    var today = classesOn(now.day).filter(function (x) { return toMin(x.t) + (x.dur || 60) > now.min; });
-    var label = "Today, " + DAYS[now.day];
-    var items = today, showDay = now.day;
-    if (!today.length) {
-      // Nothing left today: show the next day that has classes
+    // Default day: today if classes remain, otherwise the next day with classes
+    var homeDay = now.day, homeLabel = "Today, " + DAYS[now.day];
+    if (!classesOn(now.day).some(function (x) { return !isPast(x, now.day); })) {
       for (var i = 1; i <= 7; i++) {
-        var d = (now.day + i) % 7, c = classesOn(d);
-        if (c.length) { items = c; showDay = d; label = (i === 1 ? "Tomorrow, " : "") + DAYS[d]; break; }
+        var dd = (now.day + i) % 7;
+        if (classesOn(dd).length) { homeDay = dd; homeLabel = (i === 1 ? "Tomorrow, " : "") + DAYS[dd]; break; }
       }
     }
-    var nextFlagged = false;
-    var html = items.map(function (x) {
-      var start = toMin(x.t), cls = "", tag = "";
-      if (showDay === now.day && start <= now.min) { cls = "is-now"; tag = '<span class="tag">On now</span>'; }
-      else if (!nextFlagged) { cls = "is-next"; tag = '<span class="tag">Next</span>'; nextFlagged = true; }
-      var len = x.dur && x.dur !== 60 ? ", " + x.dur + " min" : "";
-      var href = x.p === "youth" ? "https://www.atpeugene.com" : BOOK_URL;
-      return '<li class="' + cls + '"><span class="t">' + fmt(x.t) + '</span><span class="p">' + esc(x.n) + tag +
-        '</span><span class="c">' + esc(x.c || "") + len + '</span><a class="cover" href="' + href + '" rel="noopener" aria-label="Book ' + esc(fmt(x.t) + " " + x.n) + '"></a></li>';
-    }).join("");
-    list.innerHTML = html;
-    dayEl.textContent = label;
+    var expanded = false, selDay = homeDay;
 
-    var open = SCHEDULE.filter(function (x) { return x.d === showDay && x.p === "open" && (showDay !== now.day || toMin(x.end) > now.min); });
-    var openTxt = open.length
-      ? "Open gym " + open.map(function (x) { return fmt(x.t).replace(":00", "") + "–" + fmt(x.end).replace(":00", ""); }).join(", ")
-      : "Members: 24/7 keycode access";
-    foot.innerHTML = "<span>" + esc(openTxt) + '</span><a href="/schedule">Full schedule</a>';
+    function rows(d, limit) {
+      var items = classesOn(d), nextFlagged = false;
+      if (!expanded) items = items.filter(function (x) { return !isPast(x, d); });
+      var hidden = limit ? Math.max(0, items.length - limit) : 0;
+      if (limit) items = items.slice(0, limit);
+      var html = items.map(function (x) {
+        var start = toMin(x.t), cls = "", tag = "";
+        if (isPast(x, d)) cls = "is-past";
+        else if (d === now.day && start <= now.min) { cls = "is-now"; tag = '<span class="tag">On now</span>'; }
+        else if (!nextFlagged && d === homeDay) { cls = "is-next"; tag = '<span class="tag">Next</span>'; nextFlagged = true; }
+        var len = x.dur && x.dur !== 60 ? ", " + x.dur + " min" : "";
+        var href = x.p === "youth" ? "https://www.atpeugene.com" : BOOK_URL;
+        return '<li class="' + cls + '"><span class="t">' + fmt(x.t) + '</span><span class="p">' + esc(x.n) + tag +
+          '</span><span class="c">' + esc(x.c || "") + len + '</span><a class="cover" href="' + href + '" rel="noopener" aria-label="Book ' + esc(DAYS[d] + " " + fmt(x.t) + " " + x.n) + '"></a></li>';
+      }).join("");
+      return { html: html || '<li class="board-empty">No classes. Members have 24/7 keycode access.</li>', hidden: hidden };
+    }
+    function openGym(d) {
+      var open = SCHEDULE.filter(function (x) { return x.d === d && x.p === "open" && (d !== now.day || toMin(x.end) > now.min); });
+      return open.length
+        ? "Open gym " + open.map(function (x) { return fmt(x.t).replace(":00", "") + "–" + fmt(x.end).replace(":00", ""); }).join(", ")
+        : "Members: 24/7 keycode access";
+    }
+    function tabs() {
+      var h = '<div class="board-tabs" role="tablist" aria-label="Pick a day">';
+      for (var i = 0; i < 7; i++) {
+        var d = (now.day + i) % 7;
+        h += '<button type="button" role="tab" data-d="' + d + '" aria-selected="' + (d === selDay) + '">' + (i === 0 ? "Today" : SHORT[d]) + "</button>";
+      }
+      return h + "</div>";
+    }
+    var tabsWrap = document.createElement("div");
+    tabsWrap.className = "board-tabs-wrap";
+    list.parentNode.insertBefore(tabsWrap, list);
+    var toggle = document.createElement("button");
+    toggle.type = "button"; toggle.className = "board-toggle";
+    toggle.setAttribute("aria-expanded", "false");
+    board.appendChild(toggle);
+
+    function render() {
+      var r = rows(selDay, expanded ? 0 : COLLAPSED);
+      list.innerHTML = r.html;
+      tabsWrap.innerHTML = expanded ? tabs() : "";
+      dayEl.textContent = expanded ? (selDay === now.day ? "Today, " : "") + DAYS[selDay] : homeLabel;
+      foot.innerHTML = "<span>" + esc(openGym(selDay)) + '</span><a href="/schedule">Full schedule &amp; pricing</a>';
+      foot.hidden = !expanded;
+      board.classList.toggle("is-expanded", expanded);
+      toggle.setAttribute("aria-expanded", String(expanded));
+      toggle.innerHTML = expanded
+        ? '<span>Show less</span><span class="chev" aria-hidden="true"></span>'
+        : '<span>' + (r.hidden ? "+" + r.hidden + (homeDay === now.day ? " more today · " : " more · ") : "") + "See the week's schedule</span>" + '<span class="chev" aria-hidden="true"></span>';
+    }
+    var anim = null;
+    function animateTo(fn) {
+      var reduceM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var h0 = board.getBoundingClientRect().height;
+      if (anim) anim.cancel();
+      fn();
+      if (reduceM || !board.animate) return;
+      var h1 = board.getBoundingClientRect().height;
+      if (Math.abs(h1 - h0) < 2) return;
+      anim = board.animate([{ height: h0 + "px" }, { height: h1 + "px" }], { duration: 380, easing: "cubic-bezier(.2,.7,.2,1)" });
+      anim.onfinish = anim.oncancel = function () { anim = null; };
+    }
+    toggle.addEventListener("click", function () {
+      animateTo(function () { expanded = !expanded; selDay = homeDay; render(); });
+      if (!expanded) board.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+    tabsWrap.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-d]");
+      if (!t) return;
+      animateTo(function () { selDay = +t.getAttribute("data-d"); render(); });
+      var nb = tabsWrap.querySelector('[data-d="' + selDay + '"]');
+      if (nb) nb.focus();
+    });
+    render();
   }
 
   // ---- Schedule filter + today highlight ----
