@@ -212,7 +212,7 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
 (function(){document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a||a.classList.contains("skip"))return;var id=a.getAttribute("href").slice(1);if(!id)return;var t=document.getElementById(id);if(!t)return;e.preventDefault();var top=t.getBoundingClientRect().top+window.pageYOffset-parseFloat(getComputedStyle(t).scrollMarginTop||0);window.scrollTo({top:top,behavior:"smooth"});if(history.pushState)history.pushState(null,"","#"+id);});})();
 // Open an expandable card when a link or redirect targets it (e.g. /youth#sample)
 (function(){function o(){var id=location.hash.slice(1);if(!id)return;var t=document.getElementById(id);var d=t&&(t.tagName==="DETAILS"?t:(t.querySelector&&t.querySelector("details[data-autoopen]"))||(t.closest&&t.closest("details")));if(d)d.open=true;}o();window.addEventListener("hashchange",o);document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(a)setTimeout(o,0);});})();
-// ---- Wall-ball buddy: a tiny figure whose reps are locked to scrolling ----
+// ---- Wall-ball buddy: a tiny figure whose reps are locked to page position ----
 (function () {
   if (!window.matchMedia || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (!document.body || document.querySelector(".wb-buddy")) return;
@@ -275,27 +275,10 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
     set(ball, "cx", bx); set(ball, "cy", by); set(ballH, "cx", bx); set(ballH, "cy", by);
   }
 
-  // shown = what's drawn; goal = where scrolling says he should be (in reps, always forward)
-  var shown = 0, goal = 0, lastY = window.pageYOffset, lastT = 0, lastScroll = 0, running = false;
-  draw(0);
-  function frame(now) {
-    var dt = Math.min(50, now - lastT || 16); lastT = now;
-    if (now - lastScroll > 180) {
-      // scrolling stopped: finish the current rep at a relaxed pace, then rest at the chest
-      var restAt = Math.ceil(goal - 1e-6);
-      if (goal % 1 > 1e-6) goal = Math.min(restAt, goal + dt / 1000 * 0.9);
-    }
-    shown += (goal - shown) * Math.min(1, dt / 45);   // tiny smoothing so it tracks the scroll without jitter
-    if (Math.abs(goal - shown) < 0.0005) shown = goal;
-    draw(shown % 1);
-    if (shown === goal && goal % 1 < 1e-6 && now - lastScroll > 180) { running = false; shown = goal = Math.round(goal); return; }
-    requestAnimationFrame(frame);
-  }
-  function kick() { if (!running && !document.hidden) { running = true; lastT = performance.now(); requestAnimationFrame(frame); } }
-  window.addEventListener("scroll", function () {
-    var y = window.pageYOffset;
-    goal += Math.min(Math.abs(y - lastY), 1200) / REP_PX;   // locked to distance scrolled, either direction
-    lastY = y; lastScroll = performance.now();
-    kick();
-  }, { passive: true });
+  // Locked to page position: the pose is a pure function of how far down the page you are.
+  // Stop scrolling and he freezes; scroll back up and the rep rewinds. Draws at most once per frame.
+  var queued = false;
+  function render() { queued = false; draw(((window.pageYOffset / REP_PX) % 1 + 1) % 1); }
+  render();
+  window.addEventListener("scroll", function () { if (!queued) { queued = true; requestAnimationFrame(render); } }, { passive: true });
 })();
