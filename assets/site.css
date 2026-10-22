@@ -758,3 +758,23 @@ section.dark[aria-labelledby="start-title"] { padding-top: clamp(2rem, 4vw, 3.5r
 .atp-foot img { display: inline-block; height: 0.8em; width: auto; vertical-align: -0.02em; }
 @media (max-width: 480px) { .atp-mark { height: 30px; } .atp-lockup-text { font-size: 0.72rem; } }
 .program-row h3 img.atp-badge, .program-row h3 img.atp-badge:is(*) { display: inline-block; width: auto !important; height: 0.5em !important; object-fit: contain; border-radius: 0; background: none; grid-column: auto; grid-row: auto; align-self: auto; margin-left: 0.6rem; vertical-align: 0.14em; }
+/* ATP hero: full-height photo on the right that fades into the page */
+@media (min-width: 901px) {
+  .youth-page .page-hero { min-height: min(78vh, 760px); display: flex; align-items: center; }
+  .youth-page .page-hero-grid { width: 100%; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); }
+  .youth-page .page-hero h1 { font-size: clamp(2.8rem, 1.2rem + 4vw, 5rem); }
+  .youth-page .page-hero .photo.landscape {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 56vw; max-width: none; height: auto;
+    aspect-ratio: auto; border-radius: 0; background: none; z-index: 0;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.35) 18%, #000 45%);
+            mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.35) 18%, #000 45%);
+  }
+  .youth-page .page-hero .photo.landscape img { object-position: 58% 45% !important; }
+  .youth-page .page-hero .photo.landscape::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.0) 70%, rgba(255,255,255,.55) 100%);
+  }
+  .youth-page .page-hero-grid > div:first-child { position: relative; z-index: 2; }
+  .youth-page .page-hero-grid { position: static; }
+}
+@media (min-width: 601px) { .subnav { flex-wrap: wrap; overflow: visible; } }
