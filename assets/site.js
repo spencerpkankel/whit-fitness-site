@@ -219,16 +219,15 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
   var wrap = document.createElement("div");
   wrap.className = "wb-buddy"; wrap.setAttribute("aria-hidden", "true");
   wrap.innerHTML =
-    '<svg viewBox="0 -46 70 144" focusable="false">' +
-      '<g class="wb-halo"><line class="wb-floor-h" x1="14" y1="93.5" x2="66" y2="93.5"/><line x1="62" y1="-44" x2="62" y2="93.5"/></g>' +
-      '<line class="wb-floor" x1="14" y1="93.5" x2="66" y2="93.5"/>' +
-      '<line class="wb-wall" x1="62" y1="-44" x2="62" y2="93.5"/>' +
-      '<line class="wb-target" x1="58" y1="-33" x2="62" y2="-33"/>' +
+    '<svg viewBox="0 -46 62 144" focusable="false">' +
+      '<g class="wb-halo"><line class="wb-floor-h" x1="14" y1="93.5" x2="62" y2="93.5"/></g>' +
+      '<line class="wb-floor" x1="14" y1="93.5" x2="62" y2="93.5"/>' +
+            '<line class="wb-target" x1="58" y1="-33" x2="62" y2="-33"/>' +
       '<g class="wb-fig"><g class="wb-halo"><path class="wb-body-h" d=""/><circle class="wb-head-h" r="5.2"/></g>' +
         '<path class="wb-body" d=""/><circle class="wb-head" r="5.2"/></g>' +
       '<g class="wb-halo"><circle class="wb-ball-h" r="5.6"/></g><circle class="wb-ball" r="5.6"/>' +
       '<g class="wb-stars" opacity="0"><path d="M0 -4V4M-4 0H4M-2.8 -2.8L2.8 2.8M-2.8 2.8L2.8 -2.8"/></g>' +
-      '<rect class="wb-hit" x="18" y="-46" width="50" height="142" fill="transparent"/>' +
+      '<rect class="wb-hit" x="16" y="-46" width="46" height="142" fill="transparent"/>' +
     '</svg>';
   document.body.appendChild(wrap);
   var q = function (c) { return wrap.querySelector(c); };
