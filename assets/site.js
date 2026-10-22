@@ -212,88 +212,82 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
 (function(){document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a||a.classList.contains("skip"))return;var id=a.getAttribute("href").slice(1);if(!id)return;var t=document.getElementById(id);if(!t)return;e.preventDefault();var top=t.getBoundingClientRect().top+window.pageYOffset-parseFloat(getComputedStyle(t).scrollMarginTop||0);window.scrollTo({top:top,behavior:"smooth"});if(history.pushState)history.pushState(null,"","#"+id);});})();
 // Open an expandable card when a link or redirect targets it (e.g. /youth#sample)
 (function(){function o(){var id=location.hash.slice(1);if(!id)return;var t=document.getElementById(id);var d=t&&(t.tagName==="DETAILS"?t:(t.querySelector&&t.querySelector("details[data-autoopen]"))||(t.closest&&t.closest("details")));if(d)d.open=true;}o();window.addEventListener("hashchange",o);document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(a)setTimeout(o,0);});})();
-// ---- Wall-ball buddy: a tiny figure whose rep speed follows scroll speed ----
+// ---- Wall-ball buddy: a tiny figure whose reps are locked to scrolling ----
 (function () {
   if (!window.matchMedia || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (!document.body || document.querySelector(".wb-buddy")) return;
-  var NS = "http://www.w3.org/2000/svg";
   var wrap = document.createElement("div");
   wrap.className = "wb-buddy"; wrap.setAttribute("aria-hidden", "true");
   wrap.innerHTML =
-    '<svg viewBox="0 -24 70 122" width="70" height="122" focusable="false">' +
-      '<line class="wb-floor" x1="6" y1="93.5" x2="66" y2="93.5"/>' +
-      '<line class="wb-wall" x1="62" y1="-22" x2="62" y2="93.5"/>' +
-      '<line class="wb-target" x1="58" y1="-12" x2="62" y2="-12"/>' +
+    '<svg viewBox="0 -46 70 144" focusable="false">' +
+      '<g class="wb-halo"><line x1="14" y1="93.5" x2="66" y2="93.5"/><line x1="62" y1="-44" x2="62" y2="93.5"/><path class="wb-body-h" d=""/><circle class="wb-head-h" r="5.2"/><circle class="wb-ball-h" r="5.6"/></g>' +
+      '<line class="wb-floor" x1="14" y1="93.5" x2="66" y2="93.5"/>' +
+      '<line class="wb-wall" x1="62" y1="-44" x2="62" y2="93.5"/>' +
+      '<line class="wb-target" x1="58" y1="-33" x2="62" y2="-33"/>' +
       '<path class="wb-body" d=""/>' +
       '<circle class="wb-head" r="5.2"/>' +
       '<circle class="wb-ball" r="5.6"/>' +
     '</svg>';
   document.body.appendChild(wrap);
-  var body = wrap.querySelector(".wb-body"), head = wrap.querySelector(".wb-head"), ball = wrap.querySelector(".wb-ball");
+  var q = function (c) { return wrap.querySelector(c); };
+  var body = q(".wb-body"), head = q(".wb-head"), ball = q(".wb-ball"), bodyH = q(".wb-body-h"), headH = q(".wb-head-h"), ballH = q(".wb-ball-h");
 
-  // Joint angles in degrees: 0 = straight up, positive = leaning toward the wall (right).
+  // Joint angles in degrees: 0 = straight up, positive = toward the wall (right).
   // [shin, thigh, torso, upperArm, forearm]
   var STAND = [0, 0, 2, 150, 20];
   var SQUAT = [32, -78, 32, 120, -10];
   var THROW = [-4, 2, -2, 14, 6];
   var L = { shin: 19, thigh: 19, torso: 23, upper: 11, fore: 10.5 };
-  var ANK = [30, 92];
+  var ANK = [39.5, 92];                 // closer to the wall
+  var TARGET = [56, -33];               // higher throw
+  var REP_PX = 420;                     // pixels of scrolling per rep
 
   function dir(a) { var r = a * Math.PI / 180; return [Math.sin(r), -Math.cos(r)]; }
   function add(p, a, len) { var d = dir(a); return [p[0] + d[0] * len, p[1] + d[1] * len]; }
   function lerp(a, b, t) { return a + (b - a) * t; }
   function mix(A, B, t) { return A.map(function (v, i) { return lerp(v, B[i], t); }); }
   function ease(t) { return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
-
   function pose(p) {
-    // 0-.35 stand->squat, .35-.55 drive & throw, .55-.78 arms up while ball flies, .78-1 catch -> chest
     if (p < .35) return mix(STAND, SQUAT, ease(p / .35));
     if (p < .55) return mix(SQUAT, THROW, ease((p - .35) / .2));
     if (p < .78) return THROW;
     return mix(THROW, STAND, ease((p - .78) / .22));
   }
-
+  function set(el, a, v) { el.setAttribute(a, v); }
   function draw(p) {
     var a = pose(p);
     var knee = add(ANK, a[0], L.shin), hip = add(knee, a[1], L.thigh), neck = add(hip, a[2], L.torso), sh = add(hip, a[2], L.torso - 4.5);
-    var elb = add(sh, a[3], L.upper), hand = add(elb, a[4], L.fore);
-    var hc = add(neck, a[2], 5.6);
-    body.setAttribute("d",
-      "M" + (ANK[0] + 5) + " " + ANK[1] + "H" + ANK[0] +
-      "L" + knee + "L" + hip + "L" + neck + "M" + sh + "L" + elb + "L" + hand);
-    head.setAttribute("cx", hc[0]); head.setAttribute("cy", hc[1]);
+    var elb = add(sh, a[3], L.upper), hand = add(elb, a[4], L.fore), hc = add(neck, a[2], 5.6);
+    var d = "M" + (ANK[0] + 5) + " " + ANK[1] + "H" + ANK[0] + "L" + knee + "L" + hip + "L" + neck + "M" + sh + "L" + elb + "L" + hand;
+    set(body, "d", d); set(bodyH, "d", d);
+    set(head, "cx", hc[0]); set(head, "cy", hc[1]); set(headH, "cx", hc[0]); set(headH, "cy", hc[1]);
     var bx = hand[0] + 3.5, by = hand[1] - 2;
-    if (p >= .55 && p < .78) {
-      // ball flight: up to the target and back to the hands
-      var t = (p - .55) / .23, h = Math.sin(Math.PI * t);
-      bx = lerp(bx, 56, h); by = lerp(by, -12, h);
-    }
-    ball.setAttribute("cx", bx.toFixed(2)); ball.setAttribute("cy", by.toFixed(2));
+    if (p >= .55 && p < .78) { var h = Math.sin(Math.PI * (p - .55) / .23); bx = lerp(bx, TARGET[0], h); by = lerp(by, TARGET[1], h); }
+    bx = bx.toFixed(2); by = by.toFixed(2);
+    set(ball, "cx", bx); set(ball, "cy", by); set(ballH, "cx", bx); set(ballH, "cy", by);
   }
 
-  var phase = 0, rate = 0, target = 0, lastY = window.pageYOffset, lastT = 0, running = false, lastScroll = 0;
+  // shown = what's drawn; goal = where scrolling says he should be (in reps, always forward)
+  var shown = 0, goal = 0, lastY = window.pageYOffset, lastT = 0, lastScroll = 0, running = false;
   draw(0);
-
   function frame(now) {
     var dt = Math.min(50, now - lastT || 16); lastT = now;
-    if (now - lastScroll > 140) target = 0;
-    rate += (target - rate) * Math.min(1, dt / 160);            // smooth speed changes
-    var r = Math.max(rate, phase > 0.0001 ? 0.55 : 0);           // always finish the rep
-    phase += r * dt / 1000;
-    if (phase >= 1) { phase -= 1; if (target === 0 && rate < .6) { phase = 0; } }
-    draw(phase);
-    if (phase === 0 && target === 0 && rate < .6) { running = false; rate = 0; return; }
+    if (now - lastScroll > 180) {
+      // scrolling stopped: finish the current rep at a relaxed pace, then rest at the chest
+      var restAt = Math.ceil(goal - 1e-6);
+      if (goal % 1 > 1e-6) goal = Math.min(restAt, goal + dt / 1000 * 0.9);
+    }
+    shown += (goal - shown) * Math.min(1, dt / 45);   // tiny smoothing so it tracks the scroll without jitter
+    if (Math.abs(goal - shown) < 0.0005) shown = goal;
+    draw(shown % 1);
+    if (shown === goal && goal % 1 < 1e-6 && now - lastScroll > 180) { running = false; shown = goal = Math.round(goal); return; }
     requestAnimationFrame(frame);
   }
   function kick() { if (!running && !document.hidden) { running = true; lastT = performance.now(); requestAnimationFrame(frame); } }
-
   window.addEventListener("scroll", function () {
-    var now = performance.now(), y = window.pageYOffset;
-    var dt = Math.max(8, now - (lastScroll || now - 16));
-    var v = Math.abs(y - lastY) / dt;                            // px per ms
-    lastY = y; lastScroll = now;
-    target = Math.min(3.2, 0.7 + v * 0.9);                       // reps per second
+    var y = window.pageYOffset;
+    goal += Math.min(Math.abs(y - lastY), 1200) / REP_PX;   // locked to distance scrolled, either direction
+    lastY = y; lastScroll = performance.now();
     kick();
   }, { passive: true });
-  document.addEventListener("visibilitychange", function () { if (document.hidden) { target = 0; } });
 })();
