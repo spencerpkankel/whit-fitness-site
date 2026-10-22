@@ -786,3 +786,19 @@ section.dark[aria-labelledby="start-title"] { padding-top: clamp(2rem, 4vw, 3.5r
   }
   .youth-page .page-hero .photo.landscape::after { display: none; }
 }
+@media (min-width: 901px) and (max-width: 1279px) {
+  .youth-page .subnav { flex-wrap: nowrap; gap: 0.3rem; }
+  .youth-page .subnav a { padding: 0.28rem 0.62rem; font-size: 0.78rem; }
+}
+@media (max-width: 480px) {
+  .youth-page .subnav { gap: 0.25rem; -webkit-mask-image: none; mask-image: none; margin-right: 0; padding-right: 0; }
+  .youth-page .subnav a { padding: 0.26rem 0.5rem; font-size: 0.74rem; min-height: 32px; }
+}
+@media (max-width: 359px) { .youth-page .subnav a { padding: 0.24rem 0.4rem; font-size: 0.7rem; } }
+@media (min-width: 901px) and (max-width: 1023px) {
+  .youth-page .subnav { gap: 0.25rem; }
+  .youth-page .subnav a { padding: 0.26rem 0.5rem; font-size: 0.72rem; }
+}
+.subnav .sn-short { display: none; }
+@media (max-width: 480px) { .subnav .sn-long { display: none; } .subnav .sn-short { display: inline; } }
+@media (max-width: 374px) { .youth-page .subnav { gap: 0.2rem; } .youth-page .subnav a { padding: 0.24rem 0.42rem; font-size: 0.7rem; } }
