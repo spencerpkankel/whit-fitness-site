@@ -1,6 +1,6 @@
 # Whit Fitness: full fact sheet
 
-Last updated: 2026-10-21. Canonical site: https://whit-fitness.com/
+Last updated: 2026-10-22. Canonical site: https://whit-fitness.com/
 
 ## Identity
 - Name: Whit Fitness (formerly CrossFit Evviva; same gym, same owners and coaches, new name)
@@ -22,7 +22,7 @@ Mon–Thu 5:00am–7:30pm · Fri 5:00am–6:30pm · Sat 8:00–11:00am · Sun 8:
 - HYROX: Wednesday at 5:00am, 6:00am, 9:00am, 12:00pm, 4:30pm and 5:30pm; Saturday at 8:00am and 9:15am (75 min); Sunday at 9:30am
 - Lift + Mobility: Sunday at 8:30am
 - Vitality 55+: Tuesday and Thursday at 10:00am
-- ATP youth athletic training: Monday–Thursday at 6:30pm
+- ATP youth strength & athletic development: Monday–Thursday at 6:30pm (booked through Upper Hand)
 - Open gym: members have 24/7 keycode access; Sunday open gym 12:00–1:00pm
 
 ## Pricing
@@ -36,12 +36,14 @@ Mon–Thu 5:00am–7:30pm · Fri 5:00am–6:30pm · Sat 8:00–11:00am · Sun 8:
 - First HYROX class: free
 - Personal training consultation: free
 - Student and military discounts available
+- ATP youth classes (booked through Upper Hand, separate from gym memberships): $20 drop-in, $175 for 10 classes, $300 for 20 classes, $120/month membership
 
 ## Getting started
 - New to CrossFit: book an On-Ramp (1–4 one-to-one sessions) before joining classes: https://crossfitevviva.wodify.com/OnlineSalesPortal/PaymentPlans.aspx?LocationId=656&OnlineMembershipId=286469
 - Try HYROX: first class free: https://crossfitevviva.wodify.com/OnlineSalesPortal/ViewSchedule.aspx?LocationId=656&OnlineMembershipId=3065
 - Personal training: book a free consult: https://crossfitevviva.wodify.com/OnlineSalesPortal/PaymentPlans.aspx?LocationId=656&OnlineMembershipId=286631
 - Vitality 55+: https://crossfitevviva.wodify.com/OnlineSalesPortal/PaymentPlans.aspx?LocationId=656&OnlineMembershipId=291031
+- ATP youth classes (Upper Hand): https://app.upperhand.io/customers/1706-advanced-training-and-performance/events/89747-youth-general-strength-athletic-development · questions: advancedtrainingperformance@gmail.com
 - Book any class: https://crossfitevviva.wodify.com/OnlineSalesPage/Main?q=Classes%7CLocationId%3D656
 
 ## Facility
@@ -76,7 +78,7 @@ Comfortable workout clothes, training shoes and a water bottle. The lounge has l
 Yes, childcare runs Monday, Wednesday and Friday at 9am. Kids are welcome at every class, and outside childcare times parents are responsible for their kids. There's a kids' room in the gym.
 
 ### Do you have programs for kids and teens?
-Middle and high school athletes can train with our partner ATP, Monday to Thursday at 6:30pm. Sign up at atpeugene.com.
+Yes. Middle and high school athletes train with ATP, our youth sports performance program, Monday to Thursday at 6:30pm. Classes are $20 to drop in or $120 a month, booked through Upper Hand. See ATP youth training for passes, personal training and team sessions.
 
 ### How does the 24/7 keycode work?
 Members get a keycode so they can train any time, including outside class and open gym hours.

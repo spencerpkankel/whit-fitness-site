@@ -25,6 +25,12 @@ HYROX_FREE = "https://crossfitevviva.wodify.com/OnlineSalesPortal/ViewSchedule.a
 PT_CONSULT = "https://crossfitevviva.wodify.com/OnlineSalesPortal/PaymentPlans.aspx?LocationId=656&OnlineMembershipId=286631"
 VITALITY = "https://crossfitevviva.wodify.com/OnlineSalesPortal/PaymentPlans.aspx?LocationId=656&OnlineMembershipId=291031"
 SHOP = "https://whitfitnesseugene.myshopify.com"
+# ATP youth program books through Upper Hand, not Wodify
+ATP_UH = "https://app.upperhand.io/customers/1706-advanced-training-and-performance"
+ATP_BOOK = ATP_UH + "/events/89747-youth-general-strength-athletic-development"
+ATP_PASSES = ATP_UH + "/credit_passes"
+ATP_MEMBERSHIP = ATP_UH + "/client-memberships/5857"
+ATP_EMAIL = "advancedtrainingperformance@gmail.com"
 SAME_AS = [
     "https://www.instagram.com/whit.fitness_eugene/",
     "https://www.facebook.com/CrossFitEvviva",
@@ -127,13 +133,18 @@ SERVICES = {
         "offers": [{"@type": "Offer", "name": "Vitality 55+ membership", "url": VITALITY, "availability": "https://schema.org/InStock"}],
     },
     "youth": {
-        "@type": "Service", "@id": f"{DOMAIN}/youth#service", "name": "Youth athletic training (ATP)",
+        "@type": "Service", "@id": f"{DOMAIN}/youth#service", "name": "ATP youth strength & athletic development",
+        "alternateName": ["ATP Eugene", "Advanced Training & Performance", "Advanced Training and Performance"],
         "serviceType": "Youth sports performance training",
-        "description": "Speed, agility, strength and conditioning for middle and high school athletes, run by ATP at Whit Fitness. Monday to Thursday at 6:30pm.",
+        "description": "Strength, speed, power and injury-prevention training for middle and high school athletes from any sport, run by ATP (Advanced Training & Performance) at Whit Fitness. Classes Monday to Thursday at 6:30pm, plus personal training, small group, remote programming and team sessions.",
         "url": f"{DOMAIN}/youth", "image": PHOTOS["youth"],
+        "sameAs": ["https://www.instagram.com/atp_eugene/"],
         "hoursAvailable": [ohs(["Monday", "Tuesday", "Wednesday", "Thursday"], "18:30", "19:30")],
-        "audience": {"@type": "PeopleAudience", "audienceType": "Middle and high school athletes"},
-        "offers": [{"@type": "Offer", "name": "ATP youth training", "url": "https://www.atpeugene.com"}],
+        "audience": {"@type": "PeopleAudience", "audienceType": "Middle and high school athletes, U12 to U19"},
+        "offers": [once("ATP youth class drop-in", 20, ATP_BOOK),
+                   once("ATP 10-class pass", 175, ATP_PASSES, "Valid for 6 months."),
+                   once("ATP 20-class pass", 300, ATP_PASSES, "Valid for 10 months."),
+                   monthly("ATP youth monthly membership", 120, ATP_MEMBERSHIP)],
     },
     "opengym": {
         "@type": "Service", "@id": f"{DOMAIN}/schedule#open-gym", "name": "Open gym",
@@ -218,8 +229,8 @@ PAGES = {
         title="Fitness Classes for Adults 55+ in Eugene, OR | Vitality | Whit Fitness",
         desc="Vitality is a coached strength and balance class for adults 55+ in Eugene, OR. Low impact, every movement scaled. Tuesdays and Thursdays at 10am."),
     "youth.html": dict(path="/youth", type="WebPage", crumb="Youth", img="youth", svc="youth",
-        title="Youth Sports Performance Training in Eugene, OR | ATP at Whit Fitness",
-        desc="Speed, agility and strength training for middle and high school athletes in Eugene, OR. Run by ATP at Whit Fitness, Monday–Thursday at 6:30pm."),
+        title="ATP Youth Sports Performance Training in Eugene, OR | Whit Fitness",
+        desc="ATP strength and athletic development for middle and high school athletes in Eugene, OR. Classes Mon–Thu 6:30pm, $20 drop-in or $120/mo. PTs on staff."),
     "personal-training.html": dict(path="/personal-training", type="WebPage", crumb="Personal training", img="personal-training", svc="personal-training",
         title="Personal Training in Eugene, OR | Free Consult | Whit Fitness",
         desc="One-to-one personal training in Eugene, OR. Start with a free consult and an assessment, then train on a program written for you by a Whit Fitness coach."),
@@ -299,6 +310,8 @@ def graph_for(fname, cfg, src):
         g.extend(SERVICES[k] for k in ["crossfit", "hyrox", "vitality", "youth"])
     if fname == "faq.html":
         page["mainEntity"] = faqs(src)
+    if fname == "youth.html":
+        g.append({"@type": "FAQPage", "@id": f"{url}#faq", "mainEntity": faqs(src)})
     if fname == "contact.html":
         page["mainEntity"] = {"@id": GYM}
     if fname == "shop.html":
@@ -412,7 +425,7 @@ SCHEDULE = """- CrossFit: Monday, Tuesday, Thursday, Friday at 5:00am, 6:00am, 9
 - HYROX: Wednesday at 5:00am, 6:00am, 9:00am, 12:00pm, 4:30pm and 5:30pm; Saturday at 8:00am and 9:15am (75 min); Sunday at 9:30am
 - Lift + Mobility: Sunday at 8:30am
 - Vitality 55+: Tuesday and Thursday at 10:00am
-- ATP youth athletic training: Monday–Thursday at 6:30pm
+- ATP youth strength & athletic development: Monday–Thursday at 6:30pm (booked through Upper Hand)
 - Open gym: members have 24/7 keycode access; Sunday open gym 12:00–1:00pm"""
 
 PRICES = """- Unlimited membership: $160/month (all CrossFit and HYROX classes, open gym, 24/7 access)
@@ -424,7 +437,8 @@ PRICES = """- Unlimited membership: $160/month (all CrossFit and HYROX classes, 
 - On-Ramp (one-to-one intro for new CrossFitters): $50 per session ($60 for a couple)
 - First HYROX class: free
 - Personal training consultation: free
-- Student and military discounts available"""
+- Student and military discounts available
+- ATP youth classes (booked through Upper Hand, separate from gym memberships): $20 drop-in, $175 for 10 classes, $300 for 20 classes, $120/month membership"""
 
 
 def build_llms():
@@ -440,7 +454,7 @@ Book a class: {BOOK}
 - [CrossFit classes]({DOMAIN}/crossfit): coached 60-minute classes, scaled for all levels, weekdays from 5am
 - [HYROX training]({DOMAIN}/hyrox): running, sleds, SkiErg, rowing and wall balls; first class free
 - [Vitality 55+]({DOMAIN}/vitality): low-impact strength, balance and cardio for adults 55+, Tue/Thu 10am
-- [Youth athletic training]({DOMAIN}/youth): ATP speed, agility and strength for middle and high school athletes
+- [ATP youth training]({DOMAIN}/youth): ATP (Advanced Training & Performance, formerly atpeugene.com) strength and athletic development for middle and high school athletes; personal, small group and team training
 - [Personal training]({DOMAIN}/personal-training): one-to-one coaching with a free consult
 
 ## Plan a visit
@@ -487,6 +501,7 @@ Last updated: {TODAY}. Canonical site: {DOMAIN}/
 - Try HYROX: first class free: {HYROX_FREE}
 - Personal training: book a free consult: {PT_CONSULT}
 - Vitality 55+: {VITALITY}
+- ATP youth classes (Upper Hand): {ATP_BOOK} · questions: {ATP_EMAIL}
 - Book any class: {BOOK}
 
 ## Facility

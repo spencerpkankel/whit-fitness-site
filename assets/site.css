@@ -693,3 +693,21 @@ section.dark[aria-labelledby="start-title"] { padding-top: clamp(2rem, 4vw, 3.5r
 .board-foot[hidden] { display: none; }
 .hero .stroke-art { top: 0; height: 100%; }
 @media (max-width: 420px) { .board li { row-gap: .1rem; padding-block: .6rem; } .board .c { margin-top: 0; } }
+
+/* ---------- Youth / ATP page ---------- */
+.subnav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.75rem; }
+.subnav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0.4rem 0.95rem; border: 1.5px solid var(--ink); color: var(--ink); font-weight: 600; font-size: 0.95rem; text-decoration: none; }
+.subnav a:hover, .subnav a:focus-visible { background: var(--ink); color: #fff; }
+.youth-page [id] { scroll-margin-top: 5.5rem; }
+.youth-page .steps li h3:only-child { margin-bottom: 0; }
+.roster { list-style: none; padding: 0; margin: 1.5rem 0 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 0 2rem; }
+.roster li { padding: 1.1rem 0; border-top: 2px solid var(--ink); }
+.roster h3 { margin: 0 0 0.2rem; }
+.roster .role { color: var(--forest); font-weight: 600; font-size: 0.95rem; margin: 0 0 0.4rem; }
+.roster p { font-size: 0.98rem; margin: 0; }
+.quotes { list-style: none; padding: 0; margin: 1.5rem 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 1rem; }
+.quotes figure { margin: 0; height: 100%; padding: 1.25rem 1.4rem; border-left: 4px solid var(--forest); background: var(--paper); display: flex; flex-direction: column; justify-content: space-between; gap: 0.75rem; }
+.quotes blockquote { margin: 0; }
+.quotes blockquote p { margin: 0; font-size: 1.08rem; }
+.quotes figcaption { font-size: 0.92rem; color: var(--muted); font-weight: 600; }
+.youth-page .tone-paper .price-list, .youth-page .tone-paper .steps { background: transparent; }

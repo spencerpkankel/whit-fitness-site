@@ -4,6 +4,193 @@
   "trailingSlash": false,
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth",
+      "permanent": true
+    },
+    {
+      "source": "/about-us",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#why-atp",
+      "permanent": true
+    },
+    {
+      "source": "/new-page-2",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#why-atp",
+      "permanent": true
+    },
+    {
+      "source": "/team",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#coaches",
+      "permanent": true
+    },
+    {
+      "source": "/ourfacility",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/#facility",
+      "permanent": true
+    },
+    {
+      "source": "/what-we-offer",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#training",
+      "permanent": true
+    },
+    {
+      "source": "/strength-and-athletic-development",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#classes",
+      "permanent": true
+    },
+    {
+      "source": "/personal-training-and-small-group",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#training",
+      "permanent": true
+    },
+    {
+      "source": "/emfc-performance-program",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#teams",
+      "permanent": true
+    },
+    {
+      "source": "/example-practice-and-workout",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#sample",
+      "permanent": true
+    },
+    {
+      "source": "/photos-videos",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth",
+      "permanent": true
+    },
+    {
+      "source": "/testimonials",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#parents",
+      "permanent": true
+    },
+    {
+      "source": "/contact-us",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#contact",
+      "permanent": true
+    },
+    {
+      "source": "/partnerships",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#teams",
+      "permanent": true
+    },
+    {
+      "source": "/upperhand-faqs",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#faq",
+      "permanent": true
+    },
+    {
+      "source": "/cart",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth#pricing",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/youth",
+      "permanent": true
+    },
+    {
       "source": "/home",
       "destination": "/",
       "permanent": true
