@@ -212,39 +212,14 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
 (function(){document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a||a.classList.contains("skip"))return;var id=a.getAttribute("href").slice(1);if(!id)return;var t=document.getElementById(id);if(!t)return;e.preventDefault();var top=t.getBoundingClientRect().top+window.pageYOffset-parseFloat(getComputedStyle(t).scrollMarginTop||0);window.scrollTo({top:top,behavior:"smooth"});if(history.pushState)history.pushState(null,"","#"+id);});})();
 // Open an expandable card when a link or redirect targets it (e.g. /youth#sample)
 (function(){function o(){var id=location.hash.slice(1);if(!id)return;var t=document.getElementById(id);var d=t&&(t.tagName==="DETAILS"?t:(t.querySelector&&t.querySelector("details[data-autoopen]"))||(t.closest&&t.closest("details")));if(d)d.open=true;}o();window.addEventListener("hashchange",o);document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(a)setTimeout(o,0);});})();
-// ---- Wall-ball buddy: a tiny figure whose reps are locked to page position ----
+// ---- Scroll buddies: tiny figures whose reps are locked to page position ----
+// /hyrox gets a wall-ball guy, /crossfit gets a thruster guy. Click one to knock him over.
 (function () {
   if (!window.matchMedia || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (!document.body || document.querySelector(".wb-buddy")) return;
-  var wrap = document.createElement("div");
-  wrap.className = "wb-buddy"; wrap.setAttribute("aria-hidden", "true");
-  wrap.innerHTML =
-    '<svg viewBox="0 -46 62 144" focusable="false">' +
-      '<g class="wb-halo"><line class="wb-floor-h" x1="14" y1="93.5" x2="62" y2="93.5"/></g>' +
-      '<line class="wb-floor" x1="14" y1="93.5" x2="62" y2="93.5"/>' +
-            '<line class="wb-target" x1="58" y1="-33" x2="62" y2="-33"/>' +
-      '<g class="wb-fig"><g class="wb-halo"><path class="wb-body-h" d=""/><circle class="wb-head-h" r="5.2"/></g>' +
-        '<path class="wb-body" d=""/><circle class="wb-head" r="5.2"/></g>' +
-      '<g class="wb-halo"><circle class="wb-ball-h" r="5.6"/></g><circle class="wb-ball" r="5.6"/>' +
-      '<g class="wb-stars" opacity="0"><path d="M0 -4V4M-4 0H4M-2.8 -2.8L2.8 2.8M-2.8 2.8L2.8 -2.8"/></g>' +
-      '<rect class="wb-hit" x="16" y="-46" width="46" height="142" fill="transparent"/>' +
-    '</svg>';
-  document.body.appendChild(wrap);
-  var q = function (c) { return wrap.querySelector(c); };
-  var body = q(".wb-body"), head = q(".wb-head"), ball = q(".wb-ball"), bodyH = q(".wb-body-h"), headH = q(".wb-head-h"), ballH = q(".wb-ball-h");
-  var fig = q(".wb-fig"), stars = q(".wb-stars"), floor = q(".wb-floor"), floorH = q(".wb-floor-h");
-
-  // Joint angles in degrees: 0 = straight up, positive = toward the wall (right).
-  // [shin, thigh, torso, upperArm, forearm]
-  var STAND = [0, 0, 2, 150, 20];
-  var SQUAT = [36, -106, 40, 112, -18];   // hips below the knees (below parallel)
-  var THROW = [-4, 2, -2, 14, 6];
-  var FLAIL = [0, 0, -4, 96, 70];       // arms reach up toward the sky once he's on his back
-  var L = { shin: 19, thigh: 19, torso: 23, upper: 11, fore: 10.5 };
-  var ANK = [39.5, 92];
-  var TARGET = [56, -33];
-  var REP_PX = 420;
-  var FALL = -84;                       // degrees he tips over backwards when knocked down
+  var path = location.pathname.replace(/\.html$/, "").replace(/\/+$/, "");
+  var kind = path === "/hyrox" ? "wallball" : path === "/crossfit" ? "thruster" : null;
+  if (!kind) return;
 
   function dir(a) { var r = a * Math.PI / 180; return [Math.sin(r), -Math.cos(r)]; }
   function add(p, a, len) { var d = dir(a); return [p[0] + d[0] * len, p[1] + d[1] * len]; }
@@ -255,84 +230,132 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
   function easeIn(t) { return t * t; }
   function easeOut(t) { return 1 - (1 - t) * (1 - t); }
   function clamp01(t) { return t < 0 ? 0 : t > 1 ? 1 : t; }
+
+  // Joint angles in degrees: 0 = straight up, positive = facing direction (right).
+  // [shin, thigh, torso, upperArm, forearm]
+  var L = { shin: 19, thigh: 19, torso: 23, upper: 11, fore: 10.5 };
+  var C = kind === "wallball" ? {
+    cls: "wb-wallball", viewBox: "0 -46 62 144", ank: [39.5, 92], floor: [14, 62], objR: 5.6, rep: 420,
+    STAND: [0, 0, 2, 150, 20], LOW: [36, -106, 40, 112, -18], TOP: [-4, 2, -2, 14, 6], FLAIL: [0, 0, -4, 96, 70],
+    target: [56, -33], hit: [16, -46, 46, 142],
+    pose: function (p) {
+      if (p < .28) return mix(C.STAND, C.LOW, easeOut(p / .28));
+      if (p < .46) return mix(C.LOW, C.TOP, ease((p - .28) / .18));
+      if (p < .78) return C.TOP;
+      return mix(C.TOP, C.STAND, easeIn((p - .78) / .22));
+    },
+    obj: function (p, hand) {
+      if (p >= .46 && p < .78) {
+        var t = (p - .46) / .32, arc = 1 - Math.pow(2 * t - 1, 2), out = 1 - Math.abs(2 * t - 1);
+        return [lerp(hand[0], C.target[0], out), lerp(hand[1], C.target[1], arc)];
+      }
+      return hand;
+    },
+    hold: function (hand) { return [hand[0] + 3.5, hand[1] - 2]; }
+  } : {
+    cls: "wb-thruster", viewBox: "0 -8 66 106", ank: [30, 92], floor: [4, 62], objR: 7.4, rep: 420,
+    // front rack: elbows up and forward, hands back at the shoulders
+    STAND: [0, 0, 1, 100, -55], LOW: [36, -106, 26, 116, -42], TOP: [0, 0, 0, 4, 2], FLAIL: [0, 0, -4, 96, 70],
+    hit: [6, -8, 58, 104],
+    pose: function (p) {
+      // 0-.32 front squat down, .32-.56 drive up, .46-.66 press overhead (overlaps the drive, like a real thruster),
+      // .66-.74 lockout, .74-1 bar back to the rack
+      var legs, arms;
+      if (p < .32) legs = mix(C.STAND, C.LOW, ease(p / .32));
+      else if (p < .56) legs = mix(C.LOW, C.STAND, ease((p - .32) / .24));
+      else legs = C.STAND;
+      if (p < .46) arms = p < .32 ? legs : mix(C.LOW, C.STAND, ease((p - .32) / .24));
+      else if (p < .66) arms = mix(C.STAND, C.TOP, ease((p - .46) / .2));
+      else if (p < .74) arms = C.TOP;
+      else arms = mix(C.TOP, C.STAND, ease((p - .74) / .26));
+      return [legs[0], legs[1], legs[2], arms[3], arms[4]];
+    },
+    obj: function (p, hand) { return hand; },
+    hold: function (hand, a) { var r = clamp01((a[3] - 4) / 96); return [hand[0] + 6.5 * r, hand[1] - 1 + 5.5 * r]; }   // racked: bar on the front of the shoulders
+  };
+  var ANK = C.ank, FALL = -84;
+
+  var wrap = document.createElement("div");
+  wrap.className = "wb-buddy " + C.cls; wrap.setAttribute("aria-hidden", "true");
+  var objSvg = kind === "wallball"
+    ? '<g class="wb-halo"><circle class="wb-obj-h" r="' + C.objR + '"/></g><g class="wb-obj"><circle class="wb-ball" r="' + C.objR + '"/></g>'
+    : '<g class="wb-halo"><circle class="wb-obj-h" r="' + C.objR + '"/></g><g class="wb-obj"><circle class="wb-plate" r="' + (C.objR - 1.3) + '"/><circle class="wb-hub" r="1.9"/></g>';
+  wrap.innerHTML =
+    '<svg viewBox="' + C.viewBox + '" focusable="false">' +
+      '<g class="wb-halo"><line class="wb-floor-h" x1="' + C.floor[0] + '" y1="93.5" x2="' + C.floor[1] + '" y2="93.5"/></g>' +
+      '<line class="wb-floor" x1="' + C.floor[0] + '" y1="93.5" x2="' + C.floor[1] + '" y2="93.5"/>' +
+      (C.target ? '<line class="wb-target" x1="' + (C.target[0] + 2) + '" y1="' + C.target[1] + '" x2="62" y2="' + C.target[1] + '"/>' : '') +
+      '<g class="wb-fig"><g class="wb-halo"><path class="wb-body-h" d=""/><circle class="wb-head-h" r="5.2"/></g>' +
+        '<path class="wb-body" d=""/><circle class="wb-head" r="5.2"/></g>' + objSvg +
+      '<g class="wb-stars" opacity="0"><path d="M0 -4V4M-4 0H4M-2.8 -2.8L2.8 2.8M-2.8 2.8L2.8 -2.8"/></g>' +
+      '<rect class="wb-hit" x="' + C.hit[0] + '" y="' + C.hit[1] + '" width="' + C.hit[2] + '" height="' + C.hit[3] + '" fill="transparent"/>' +
+    '</svg>';
+  document.body.appendChild(wrap);
+  var q = function (c) { return wrap.querySelector(c); };
+  var body = q(".wb-body"), head = q(".wb-head"), bodyH = q(".wb-body-h"), headH = q(".wb-head-h");
+  var obj = q(".wb-obj"), objH = q(".wb-obj-h"), fig = q(".wb-fig"), stars = q(".wb-stars"), floor = q(".wb-floor"), floorH = q(".wb-floor-h");
+
+  function set(el, a, v) { el.setAttribute(a, v); }
   function rotAround(pt, deg) {
     var r = deg * Math.PI / 180, dx = pt[0] - ANK[0], dy = pt[1] - ANK[1];
     return [ANK[0] + dx * Math.cos(r) - dy * Math.sin(r), ANK[1] + dx * Math.sin(r) + dy * Math.cos(r)];
   }
-  function pose(p) {
-    if (p < .28) return mix(STAND, SQUAT, easeOut(p / .28));
-    if (p < .46) return mix(SQUAT, THROW, ease((p - .28) / .18));
-    if (p < .78) return THROW;
-    return mix(THROW, STAND, easeIn((p - .78) / .22));
-  }
-  function set(el, a, v) { el.setAttribute(a, v); }
   function geom(a) {
     var knee = add(ANK, a[0], L.shin), hip = add(knee, a[1], L.thigh), neck = add(hip, a[2], L.torso), sh = add(hip, a[2], L.torso - 4.5);
     var elb = add(sh, a[3], L.upper), hand = add(elb, a[4], L.fore), hc = add(neck, a[2], 5.6);
     return { d: "M" + (ANK[0] + 5) + " " + ANK[1] + "H" + ANK[0] + "L" + knee + "L" + hip + "L" + neck + "M" + sh + "L" + elb + "L" + hand,
-             head: hc, hand: [hand[0] + 3.5, hand[1] - 2] };
+             head: hc, hand: C.hold(hand, a) };
   }
-  function ballFor(p, hand) {
-    if (p >= .46 && p < .78) {
-      var t = (p - .46) / .32, arc = 1 - Math.pow(2 * t - 1, 2), out = 1 - Math.abs(2 * t - 1);
-      return [lerp(hand[0], TARGET[0], out), lerp(hand[1], TARGET[1], arc)];
-    }
-    return hand;
-  }
-  function paint(a, bpos, rot) {
+  function paint(a, op, rot) {
     var g = geom(a);
     set(body, "d", g.d); set(bodyH, "d", g.d);
     set(head, "cx", g.head[0]); set(head, "cy", g.head[1]); set(headH, "cx", g.head[0]); set(headH, "cy", g.head[1]);
     set(fig, "transform", rot ? "rotate(" + rot.toFixed(2) + " " + ANK[0] + " " + ANK[1] + ")" : "");
-    var bx = bpos[0].toFixed(2), by = bpos[1].toFixed(2);
-    set(ball, "cx", bx); set(ball, "cy", by); set(ballH, "cx", bx); set(ballH, "cy", by);
-    return g;
+    var tr = "translate(" + op[0].toFixed(2) + " " + op[1].toFixed(2) + ")";
+    set(obj, "transform", tr); set(objH, "transform", tr);
   }
-  function scrollPhase() { return ((window.pageYOffset / REP_PX) % 1 + 1) % 1; }
-  function draw(p) { var a = pose(p); paint(a, ballFor(p, geom(a).hand), 0); }
+  function scrollPhase() { return ((window.pageYOffset / C.rep) % 1 + 1) % 1; }
+  function draw(p) { var a = C.pose(p); paint(a, C.obj(p, geom(a).hand), 0); }
 
-  // ---- scroll lock ----
+  // ---- scroll lock: pose is a pure function of page position; at most one draw per frame ----
   var queued = false, knocked = false;
   function render() { queued = false; if (!knocked) draw(scrollPhase()); }
   render();
   window.addEventListener("scroll", function () { if (!queued) { queued = true; requestAnimationFrame(render); } }, { passive: true });
 
-  // ---- click: knocked over, bonked by the ball, gets back up ----
+  // ---- click: knocked over, bonked, gets back up ----
   function knockout() {
     if (knocked) return;
     knocked = true;
-    var p0 = scrollPhase(), a0 = pose(p0), b0 = ballFor(p0, geom(a0).hand);
-    var headDown = rotAround(geom(FLAIL).head, FALL);              // where his head lands
-    var bonk = [headDown[0] + 1, headDown[1] - 10.6];              // ball touching the top of his head
+    var p0 = scrollPhase(), a0 = C.pose(p0), b0 = C.obj(p0, geom(a0).hand), R = C.objR;
+    var headDown = rotAround(geom(C.FLAIL).head, FALL);
+    var bonk = [headDown[0] + 1, headDown[1] - 5.2 - R];
     var apex = [lerp(b0[0], bonk[0], .45), Math.min(b0[1], bonk[1]) - 34];
-    var rest = [bonk[0] - 16, ANK[1] - 4.1];                       // ball bounces off his head, away from him
+    var rest = [bonk[0] - 10 - R, ANK[1] + 1.5 - R];
     var bounceTop = [lerp(bonk[0], rest[0], .4), bonk[1] - 12];
     var t0 = performance.now();
     set(floor, "x1", -40); set(floorH, "x1", -40);
     function step(now) {
       var t = (now - t0) / 1000, a, rot = 0, bp, s = 0;
-      // body: tip over (0-.45s), lie there (.45-1.45), get up (1.45-2.05), settle into the scroll pose (2.05-2.45)
-      if (t < .45) { var k = easeIn(t / .45); a = mix(a0, FLAIL, ease(clamp01(t / .3))); rot = FALL * k; }
-      else if (t < 1.45) { a = FLAIL; rot = FALL + Math.sin((t - .45) * 9) * Math.max(0, 1.5 - (t - .45) * 3); }
-      else if (t < 2.05) { var u = ease((t - 1.45) / .6); a = mix(FLAIL, STAND, u); rot = FALL * (1 - u); }
-      else { a = mix(STAND, pose(scrollPhase()), ease(clamp01((t - 2.05) / .4))); }
-      // ball: pops up out of his hands, falls onto his head, bounces off to the floor, comes back to his hands
+      if (t < .45) { a = mix(a0, C.FLAIL, ease(clamp01(t / .3))); rot = FALL * easeIn(t / .45); }
+      else if (t < 1.45) { a = C.FLAIL; rot = FALL + Math.sin((t - .45) * 9) * Math.max(0, 1.5 - (t - .45) * 3); }
+      else if (t < 2.05) { var u = ease((t - 1.45) / .6); a = mix(C.FLAIL, C.STAND, u); rot = FALL * (1 - u); }
+      else a = mix(C.STAND, C.pose(scrollPhase()), ease(clamp01((t - 2.05) / .4)));
       if (t < .5) bp = [lerp(b0[0], apex[0], t / .5), lerp(b0[1], apex[1], easeOut(t / .5))];
       else if (t < .9) { var f = (t - .5) / .4; bp = [lerp(apex[0], bonk[0], f), lerp(apex[1], bonk[1], easeIn(f))]; }
-      else if (t < 1.35) { var g2 = (t - .9) / .45, x = lerp(bonk[0], rest[0], g2);
-        bp = [x, g2 < .4 ? lerp(bonk[1], bounceTop[1], easeOut(g2 / .4)) : lerp(bounceTop[1], rest[1], easeIn((g2 - .4) / .6))]; }
+      else if (t < 1.35) { var g2 = (t - .9) / .45;
+        bp = [lerp(bonk[0], rest[0], g2), g2 < .4 ? lerp(bonk[1], bounceTop[1], easeOut(g2 / .4)) : lerp(bounceTop[1], rest[1], easeIn((g2 - .4) / .6))]; }
       else if (t < 1.65) bp = rest;
       else if (t < 2.05) bp = lerp2(rest, geom(a).hand, ease((t - 1.65) / .4));
-      else bp = ballFor(pose(scrollPhase()), geom(a).hand);
-      if (t >= 2.05) { var pp = scrollPhase(), hd = geom(a).hand; bp = lerp2(hd, ballFor(pp, hd), ease(clamp01((t - 2.05) / .4))); }
+      else { var hd = geom(a).hand; bp = lerp2(hd, C.obj(scrollPhase(), hd), ease(clamp01((t - 2.05) / .4))); }
       paint(a, bp, rot);
-      // stars after the bonk
-      if (t > .9 && t < 1.75) { s = t < 1.05 ? (t - .9) / .15 : 1 - (t - 1.05) / .7;
-        var ang = (t - .9) * 300;
-        set(stars, "transform", "translate(" + (headDown[0] + 2).toFixed(2) + " " + (headDown[1] - 9).toFixed(2) + ") rotate(" + ang.toFixed(1) + ") scale(" + (1.1 + 0.6 * s).toFixed(2) + ")"); }
+      if (t > .9 && t < 1.75) {
+        s = t < 1.05 ? (t - .9) / .15 : 1 - (t - 1.05) / .7;
+        set(stars, "transform", "translate(" + (headDown[0] + 2).toFixed(2) + " " + (headDown[1] - 9).toFixed(2) + ") rotate(" + ((t - .9) * 300).toFixed(1) + ") scale(" + (1.1 + 0.6 * s).toFixed(2) + ")");
+      }
       set(stars, "opacity", Math.max(0, Math.min(1, s)).toFixed(2));
       if (t < 2.45) requestAnimationFrame(step);
-      else { set(floor, "x1", 14); set(floorH, "x1", 14); set(stars, "opacity", 0); knocked = false; render(); }
+      else { set(floor, "x1", C.floor[0]); set(floorH, "x1", C.floor[0]); set(stars, "opacity", 0); knocked = false; render(); }
     }
     requestAnimationFrame(step);
   }
