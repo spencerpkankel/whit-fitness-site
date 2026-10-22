@@ -743,3 +743,18 @@ section.dark[aria-labelledby="start-title"] { padding-top: clamp(2rem, 4vw, 3.5r
 .xcard .price-list { margin-top: 0; }
 .page-hero-grid > div { min-width: 0; }
 @media (max-width: 600px) { .subnav { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); } }
+/* ATP logo placements (official SVG mark, never re-typeset) */
+.atp-lockup { display: flex; align-items: center; gap: 0.9rem; margin: 0.25rem 0 1.1rem; }
+.atp-mark { display: block; height: 36px; width: auto; }
+.atp-lockup-text { padding-left: 0.9rem; border-left: 1.5px solid var(--line); font-size: 0.8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; line-height: 1.25; color: var(--ink); }
+.atp-lockup-text span { display: block; font-weight: 500; letter-spacing: .04em; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) {
+  .atp-mark { animation: atp-reveal .7s cubic-bezier(.2,.7,.2,1) .1s both; }
+  @keyframes atp-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+}
+.atp-cta-mark { display: block; height: 24px; width: auto; margin-bottom: 0.75rem; }
+.atp-badge { display: inline-block; height: 0.5em; width: auto; margin-left: 0.6rem; vertical-align: 0.12em; opacity: .9; }
+.atp-foot { white-space: nowrap; }
+.atp-foot img { display: inline-block; height: 0.8em; width: auto; vertical-align: -0.02em; }
+@media (max-width: 480px) { .atp-mark { height: 30px; } .atp-lockup-text { font-size: 0.72rem; } }
+.program-row h3 img.atp-badge, .program-row h3 img.atp-badge:is(*) { display: inline-block; width: auto !important; height: 0.5em !important; object-fit: contain; border-radius: 0; background: none; grid-column: auto; grid-row: auto; align-self: auto; margin-left: 0.6rem; vertical-align: 0.14em; }

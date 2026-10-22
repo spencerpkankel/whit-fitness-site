@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4547 1500" width="4547" height="1500" role="img" aria-label="ATP">
+  <path d="M1500 0 L1854 0 L354 1500 L0 1500 Z" fill="#000000"></path>
+  <path d="M1604 0 H1854 V1500 H1604 Z" fill="#000000"></path>
+  <path d="M1904 0 H3301 V250 H1904 Z" fill="#000000"></path>
+  <path d="M2478 0 H2728 V1500 H2478 Z" fill="#000000"></path>
+  <path d="M3351 0 H3601 V1500 H3351 Z" fill="#000000"></path>
+  <path d="M3601 0 H4172 A375 375 0 0 1 4172 750 H3601 V500 H4172 A125 125 0 0 0 4172 250 H3601 Z" fill="#000000"></path>
+</svg>
