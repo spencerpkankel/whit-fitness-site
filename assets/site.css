@@ -711,3 +711,4 @@ section.dark[aria-labelledby="start-title"] { padding-top: clamp(2rem, 4vw, 3.5r
 .quotes blockquote p { margin: 0; font-size: 1.08rem; }
 .quotes figcaption { font-size: 0.92rem; color: var(--muted); font-weight: 600; }
 .youth-page .tone-paper .price-list, .youth-page .tone-paper .steps { background: transparent; }
+@media (prefers-reduced-motion: no-preference) { html:has(.youth-page) { scroll-behavior: smooth; } }
