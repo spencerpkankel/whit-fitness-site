@@ -733,3 +733,9 @@ section.dark[aria-labelledby="start-title"] { padding-top: clamp(2rem, 4vw, 3.5r
 .xcard-body > p:last-child { margin-bottom: 0; }
 @media (prefers-reduced-motion: no-preference) { .xcard[open] .xcard-body { animation: xcard-in .25s ease; } }
 @keyframes xcard-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.xcard-points { list-style: none; padding: 0; margin: 0 0 .9rem; }
+.xcard-points li { padding: .3rem 0; color: var(--muted); font-size: 1rem; }
+.xcard-points b { color: var(--ink); }
+.xcard-more-price::before { content: "See prices"; }
+.xcard[open] .xcard-more-price::before { content: "Hide prices"; }
+.xcard .price-list { margin-top: 0; }
