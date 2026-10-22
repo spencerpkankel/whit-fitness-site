@@ -212,3 +212,88 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
 (function(){document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a||a.classList.contains("skip"))return;var id=a.getAttribute("href").slice(1);if(!id)return;var t=document.getElementById(id);if(!t)return;e.preventDefault();var top=t.getBoundingClientRect().top+window.pageYOffset-parseFloat(getComputedStyle(t).scrollMarginTop||0);window.scrollTo({top:top,behavior:"smooth"});if(history.pushState)history.pushState(null,"","#"+id);});})();
 // Open an expandable card when a link or redirect targets it (e.g. /youth#sample)
 (function(){function o(){var id=location.hash.slice(1);if(!id)return;var t=document.getElementById(id);var d=t&&(t.tagName==="DETAILS"?t:(t.querySelector&&t.querySelector("details[data-autoopen]"))||(t.closest&&t.closest("details")));if(d)d.open=true;}o();window.addEventListener("hashchange",o);document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(a)setTimeout(o,0);});})();
+// ---- Wall-ball buddy: a tiny figure whose rep speed follows scroll speed ----
+(function () {
+  if (!window.matchMedia || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!document.body || document.querySelector(".wb-buddy")) return;
+  var NS = "http://www.w3.org/2000/svg";
+  var wrap = document.createElement("div");
+  wrap.className = "wb-buddy"; wrap.setAttribute("aria-hidden", "true");
+  wrap.innerHTML =
+    '<svg viewBox="0 -24 70 122" width="70" height="122" focusable="false">' +
+      '<line class="wb-floor" x1="6" y1="93.5" x2="66" y2="93.5"/>' +
+      '<line class="wb-wall" x1="62" y1="-22" x2="62" y2="93.5"/>' +
+      '<line class="wb-target" x1="58" y1="-12" x2="62" y2="-12"/>' +
+      '<path class="wb-body" d=""/>' +
+      '<circle class="wb-head" r="5.2"/>' +
+      '<circle class="wb-ball" r="5.6"/>' +
+    '</svg>';
+  document.body.appendChild(wrap);
+  var body = wrap.querySelector(".wb-body"), head = wrap.querySelector(".wb-head"), ball = wrap.querySelector(".wb-ball");
+
+  // Joint angles in degrees: 0 = straight up, positive = leaning toward the wall (right).
+  // [shin, thigh, torso, upperArm, forearm]
+  var STAND = [0, 0, 2, 150, 20];
+  var SQUAT = [32, -78, 32, 120, -10];
+  var THROW = [-4, 2, -2, 14, 6];
+  var L = { shin: 19, thigh: 19, torso: 23, upper: 11, fore: 10.5 };
+  var ANK = [30, 92];
+
+  function dir(a) { var r = a * Math.PI / 180; return [Math.sin(r), -Math.cos(r)]; }
+  function add(p, a, len) { var d = dir(a); return [p[0] + d[0] * len, p[1] + d[1] * len]; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function mix(A, B, t) { return A.map(function (v, i) { return lerp(v, B[i], t); }); }
+  function ease(t) { return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+  function pose(p) {
+    // 0-.35 stand->squat, .35-.55 drive & throw, .55-.78 arms up while ball flies, .78-1 catch -> chest
+    if (p < .35) return mix(STAND, SQUAT, ease(p / .35));
+    if (p < .55) return mix(SQUAT, THROW, ease((p - .35) / .2));
+    if (p < .78) return THROW;
+    return mix(THROW, STAND, ease((p - .78) / .22));
+  }
+
+  function draw(p) {
+    var a = pose(p);
+    var knee = add(ANK, a[0], L.shin), hip = add(knee, a[1], L.thigh), neck = add(hip, a[2], L.torso), sh = add(hip, a[2], L.torso - 4.5);
+    var elb = add(sh, a[3], L.upper), hand = add(elb, a[4], L.fore);
+    var hc = add(neck, a[2], 5.6);
+    body.setAttribute("d",
+      "M" + (ANK[0] + 5) + " " + ANK[1] + "H" + ANK[0] +
+      "L" + knee + "L" + hip + "L" + neck + "M" + sh + "L" + elb + "L" + hand);
+    head.setAttribute("cx", hc[0]); head.setAttribute("cy", hc[1]);
+    var bx = hand[0] + 3.5, by = hand[1] - 2;
+    if (p >= .55 && p < .78) {
+      // ball flight: up to the target and back to the hands
+      var t = (p - .55) / .23, h = Math.sin(Math.PI * t);
+      bx = lerp(bx, 56, h); by = lerp(by, -12, h);
+    }
+    ball.setAttribute("cx", bx.toFixed(2)); ball.setAttribute("cy", by.toFixed(2));
+  }
+
+  var phase = 0, rate = 0, target = 0, lastY = window.pageYOffset, lastT = 0, running = false, lastScroll = 0;
+  draw(0);
+
+  function frame(now) {
+    var dt = Math.min(50, now - lastT || 16); lastT = now;
+    if (now - lastScroll > 140) target = 0;
+    rate += (target - rate) * Math.min(1, dt / 160);            // smooth speed changes
+    var r = Math.max(rate, phase > 0.0001 ? 0.55 : 0);           // always finish the rep
+    phase += r * dt / 1000;
+    if (phase >= 1) { phase -= 1; if (target === 0 && rate < .6) { phase = 0; } }
+    draw(phase);
+    if (phase === 0 && target === 0 && rate < .6) { running = false; rate = 0; return; }
+    requestAnimationFrame(frame);
+  }
+  function kick() { if (!running && !document.hidden) { running = true; lastT = performance.now(); requestAnimationFrame(frame); } }
+
+  window.addEventListener("scroll", function () {
+    var now = performance.now(), y = window.pageYOffset;
+    var dt = Math.max(8, now - (lastScroll || now - 16));
+    var v = Math.abs(y - lastY) / dt;                            // px per ms
+    lastY = y; lastScroll = now;
+    target = Math.min(3.2, 0.7 + v * 0.9);                       // reps per second
+    kick();
+  }, { passive: true });
+  document.addEventListener("visibilitychange", function () { if (document.hidden) { target = 0; } });
+})();
