@@ -247,11 +247,15 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
   function lerp(a, b, t) { return a + (b - a) * t; }
   function mix(A, B, t) { return A.map(function (v, i) { return lerp(v, B[i], t); }); }
   function ease(t) { return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+  function easeIn(t) { return t * t; }
+  function easeOut(t) { return 1 - (1 - t) * (1 - t); }
+  // Catch flows straight into the next squat: easeIn into "stand" at the end of a rep and easeOut
+  // out of it at the start of the next, so there is no pause at the top between reps.
   function pose(p) {
-    if (p < .35) return mix(STAND, SQUAT, ease(p / .35));
-    if (p < .55) return mix(SQUAT, THROW, ease((p - .35) / .2));
+    if (p < .28) return mix(STAND, SQUAT, easeOut(p / .28));
+    if (p < .46) return mix(SQUAT, THROW, ease((p - .28) / .18));
     if (p < .78) return THROW;
-    return mix(THROW, STAND, ease((p - .78) / .22));
+    return mix(THROW, STAND, easeIn((p - .78) / .22));
   }
   function set(el, a, v) { el.setAttribute(a, v); }
   function draw(p) {
@@ -262,7 +266,11 @@ document.querySelectorAll(".rev-btn").forEach(function(b){b.addEventListener("cl
     set(body, "d", d); set(bodyH, "d", d);
     set(head, "cx", hc[0]); set(head, "cy", hc[1]); set(headH, "cx", hc[0]); set(headH, "cy", hc[1]);
     var bx = hand[0] + 3.5, by = hand[1] - 2;
-    if (p >= .55 && p < .78) { var h = Math.sin(Math.PI * (p - .55) / .23); bx = lerp(bx, TARGET[0], h); by = lerp(by, TARGET[1], h); }
+    if (p >= .46 && p < .78) {
+      // projectile: height follows a parabola (fast off the hands, slows at the apex, speeds up coming down)
+      var t = (p - .46) / .32, arc = 1 - Math.pow(2 * t - 1, 2), out = 1 - Math.abs(2 * t - 1);
+      bx = lerp(bx, TARGET[0], out); by = lerp(by, TARGET[1], arc);
+    }
     bx = bx.toFixed(2); by = by.toFixed(2);
     set(ball, "cx", bx); set(ball, "cy", by); set(ballH, "cx", bx); set(ballH, "cy", by);
   }
