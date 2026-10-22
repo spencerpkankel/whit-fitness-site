@@ -4,6 +4,28 @@
   "trailingSlash": false,
   "redirects": [
     {
+      "source": "/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/robots.txt",
+      "permanent": true
+    },
+    {
+      "source": "/sitemap.xml",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?atpeugene\\.com"
+        }
+      ],
+      "destination": "https://whit-fitness.com/sitemap.xml",
+      "permanent": true
+    },
+    {
       "source": "/",
       "has": [
         {
