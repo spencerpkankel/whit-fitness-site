@@ -802,3 +802,6 @@ section.dark[aria-labelledby="start-title"] { padding-top: clamp(2rem, 4vw, 3.5r
 .subnav .sn-short { display: none; }
 @media (max-width: 480px) { .subnav .sn-long { display: none; } .subnav .sn-short { display: inline; } }
 @media (max-width: 374px) { .youth-page .subnav { gap: 0.2rem; } .youth-page .subnav a { padding: 0.24rem 0.42rem; font-size: 0.7rem; } }
+@media (min-width: 901px) {
+  .youth-page .page-hero .photo.landscape img { object-position: 4% 40% !important; transform: scale(1.12); transform-origin: 30% 55%; }
+}
