@@ -542,6 +542,11 @@
       document.body.classList.remove("tv-idle"); clearTimeout(cursorT);
       cursorT = setTimeout(function () { document.body.classList.add("tv-idle"); }, 4000);
     });
+    // Any click on the TV hides Chrome's tabs and address bar (browsers only allow full screen after a click)
+    document.addEventListener("click", function () {
+      var d = document.documentElement;
+      if (!document.fullscreenElement && d.requestFullscreen) d.requestFullscreen().catch(function () {});
+    }, true);
     // Pick up site updates overnight
     setInterval(function () {
       var n = gymNow();
