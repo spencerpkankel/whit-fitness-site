@@ -152,7 +152,8 @@ async function loadProgram(key, date, prog) {
 }
 
 module.exports = async function handler(req, res) {
-  const key = process.env.WODIFY_API_KEY;
+  // Tolerate stray spaces, line breaks or quotes picked up when pasting the key into Vercel
+  const key = (process.env.WODIFY_API_KEY || "").trim().replace(/^["']|["']$/g, "").trim();
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("X-Robots-Tag", "noindex");
   if (!key) {
