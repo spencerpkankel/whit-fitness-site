@@ -178,7 +178,21 @@ module.exports = async function handler(req, res) {
   // while a workout your coaches just posted still shows up quickly.
   res.setHeader("Cache-Control", debug ? "no-store" : "public, s-maxage=120, stale-while-revalidate=600");
   res.statusCode = 200;
-  res.end(JSON.stringify(debug ? { date, programs, raw } : { date, programs }));
+  let probe;
+  if (debug) {
+    // Which Wodify endpoints accept this key? (never echoes the key itself)
+    const paths = ["/locations", "/programs", "/workouts?page_size=1", "/classes?page_size=1", "/clients?page_size=1"];
+    probe = { key_length: key.length, key_charset: /^[A-Za-z0-9]+$/.test(key) ? "alphanumeric" : "has other characters" };
+    for (const p of paths) {
+      const r = await wodify(p, key).catch((e) => ({ status: "err", body: String(e) }));
+      probe[p] = { status: r.status, body: JSON.stringify(r.body).slice(0, 160) };
+    }
+    const nokey = await fetch(API + "/locations").then(async (r) => ({ status: r.status, body: (await r.text()).slice(0, 160) })).catch((e) => String(e));
+    probe.without_key = nokey;
+    const bearer = await fetch(API + "/locations", { headers: { Authorization: "Bearer " + key } }).then(async (r) => ({ status: r.status, body: (await r.text()).slice(0, 160) })).catch((e) => String(e));
+    probe.bearer_header = bearer;
+  }
+  res.end(JSON.stringify(debug ? { date, programs, raw, probe } : { date, programs }));
 };
 
 module.exports._test = { toText, cleanHtml, normComponents, gymDate };
