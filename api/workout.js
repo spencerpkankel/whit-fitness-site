@@ -12,7 +12,9 @@
  */
 "use strict";
 
-const API = "https://api.wodify.com/v1";
+// Current Wodify API host first; the older api.wodify.com host as a fallback
+const HOSTS = ["https://app-api.wodify.com/v1", "https://api.wodify.com/v1"];
+const API = HOSTS[0];
 const LOCATION = process.env.WODIFY_LOCATION || "Whit Fitness";
 const TZ = "America/Los_Angeles";
 
@@ -28,12 +30,20 @@ function gymDate(d = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 }
 
-async function wodify(path, key) {
-  const r = await fetch(API + path, { headers: { "x-api-key": key, accept: "application/json" } });
+async function wodifyAt(host, path, key) {
+  const r = await fetch(host + path, { headers: { "x-api-key": key, accept: "application/json" } });
   const text = await r.text();
   let body;
   try { body = JSON.parse(text); } catch (e) { body = { _raw: text }; }
-  return { status: r.status, body };
+  return { status: r.status, body, host };
+}
+async function wodify(path, key) {
+  let last;
+  for (const h of HOSTS) {
+    last = await wodifyAt(h, path, key).catch((e) => ({ status: "err", body: String(e), host: h }));
+    if (last.status !== 403 && last.status !== "err") return last;
+  }
+  return last;
 }
 
 /* ---------- text helpers ---------- */
@@ -183,9 +193,9 @@ module.exports = async function handler(req, res) {
     // Which Wodify endpoints accept this key? (never echoes the key itself)
     const paths = ["/locations", "/programs", "/workouts?page_size=1", "/classes?page_size=1", "/clients?page_size=1"];
     probe = { key_length: key.length, key_charset: /^[A-Za-z0-9]+$/.test(key) ? "alphanumeric" : "has other characters" };
-    for (const p of paths) {
-      const r = await wodify(p, key).catch((e) => ({ status: "err", body: String(e) }));
-      probe[p] = { status: r.status, body: JSON.stringify(r.body).slice(0, 160) };
+    for (const h of HOSTS) for (const p of paths) {
+      const r = await wodifyAt(h, p, key).catch((e) => ({ status: "err", body: String(e) }));
+      probe[h.replace("https://", "") + p] = { status: r.status, body: JSON.stringify(r.body).slice(0, 200) };
     }
     const nokey = await fetch(API + "/locations").then(async (r) => ({ status: r.status, body: (await r.text()).slice(0, 160) })).catch((e) => String(e));
     probe.without_key = nokey;
