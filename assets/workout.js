@@ -51,6 +51,7 @@
     manualProgram: params.get("program"),      // program with no class today
     dismissed: {},                             // class ids someone said "stay" to
     toastId: null, toastAt: 0,
+    wkey: null, focus: -1, notesOpen: {},     // TV: which part is blown up, which coach notes are open
     lastTouch: Date.now(), day: null, loadedAt: Date.now(),
     offset: 0,                                 // day being viewed, relative to today (Mon..Sun of this week)
     days: {}                                   // workouts per date: { "2026-10-26": { data, error } }
@@ -294,7 +295,10 @@
         }).join(", ") + "</p>" : "");
       return;
     }
-    els.body.innerHTML = workoutHtml(w);
+    var wkey = c.id + "|" + isoAdd(isoToday(), state.offset);
+    if (wkey !== state.wkey) { state.wkey = wkey; state.focus = -1; state.notesOpen = {}; }
+    var html = workoutHtml(w);
+    if (els.body.innerHTML !== html) els.body.innerHTML = html;
   }
 
   // Skip Wodify's default names ("CrossFit 10/27/2026", "Tuesday", "Vitality"): they repeat what's on screen
@@ -311,15 +315,35 @@
     return String(t).split(/\n\s*\n/).map(function (x) { return '<span class="tv-p">' + esc(x.trim()) + "</span>"; }).join("");
   }
 
+  // Lines starting with * are coaching cues: they go with the coach notes, not the main text
+  function splitCues(text, notes) {
+    var main = [], cues = [], seen = {};
+    var key = function (x) { return x.toLowerCase().replace(/[^a-z0-9]/g, ""); };
+    String(notes || "").split("\n").forEach(function (l) { if (l.trim()) seen[key(l)] = 1; });
+    String(text || "").split("\n").forEach(function (l) {
+      var t = l.trim();
+      if (/^\*+\s*\S/.test(t)) { var cue = t.replace(/^\*+\s*/, ""); if (!seen[key(cue)]) { seen[key(cue)] = 1; cues.push(cue); } }
+      else main.push(l);
+    });
+    var m = main.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    var n = [cues.join("\n"), String(notes || "").trim()].filter(Boolean).join("\n\n");
+    return { text: m, notes: n };
+  }
+
   function workoutHtml(w) {
     var out = "";
     if (w.notes) out += '<p class="wod-notes">' + esc(w.notes) + "</p>";
     if (w.components && w.components.length) {
-      out += '<ol class="wod-parts" data-n="' + w.components.length + '">' + w.components.map(function (p, i) {
-        return '<li class="wod-part' + (p.section ? " is-section" : "") + '">' +
+      var n = w.components.length, focus = TV && n > 1 && state.focus < n ? state.focus : -1;
+      out += '<ol class="wod-parts' + (focus > -1 ? " has-focus" : "") + '" data-n="' + n + '">' + w.components.map(function (p, i) {
+        var sp = splitCues(p.text, p.notes);
+        var open = state.notesOpen[i] != null ? state.notesOpen[i] : !TV;   // TVs start with notes tucked away
+        var cls = "wod-part" + (p.section ? " is-section" : "") + (focus === i ? " is-focus" : focus > -1 ? " is-collapsed" : "");
+        return '<li class="' + cls + '"' + (TV && n > 1 ? ' data-part="' + i + '"' : "") + ">" +
           (p.name ? '<h3><span class="wod-letter" aria-hidden="true">' + String.fromCharCode(65 + i) + "</span>" + esc(p.name) + (p.score ? '<span class="wod-score">' + esc(p.score) + "</span>" : "") + "</h3>" : "") +
-          (p.text ? '<div class="wod-text">' + paras(p.text) + "</div>" : "") +
-          (p.notes ? '<div class="wod-coach"><b>Coach notes</b>' + paras(p.notes) + "</div>" : "") + "</li>";
+          (sp.text ? '<div class="wod-text">' + paras(sp.text) + "</div>" : "") +
+          (sp.notes ? '<div class="wod-coach' + (open ? " is-open" : "") + '"><button type="button" data-notes="' + i + '" aria-expanded="' + open + '">' +
+            '<b>Coach notes</b><span class="wod-coach-i" aria-hidden="true"></span></button><div class="wod-coach-body">' + paras(sp.notes) + "</div></div>" : "") + "</li>";
       }).join("") + "</ol>";
     } else if (w.html) {
       out += '<div class="wod-html">' + w.html + "</div>"; // sanitized server-side
@@ -376,8 +400,16 @@
 
   /* ---------- events ---------- */
   document.addEventListener("click", function (e) {
-    var b = e.target.closest("[data-class],[data-program],[data-live],[data-toast],[data-tv],[data-dayoff]");
+    var b = e.target.closest("[data-notes],[data-part],[data-class],[data-program],[data-live],[data-toast],[data-tv],[data-dayoff]");
     if (!b) return;
+    if (b.hasAttribute("data-notes")) {                // open / close coach notes
+      var ni = +b.getAttribute("data-notes");
+      state.notesOpen[ni] = b.getAttribute("aria-expanded") !== "true"; render(); return;
+    }
+    if (b.hasAttribute("data-part")) {                 // TV: blow one part up, tap it again to go back
+      var pi = +b.getAttribute("data-part");
+      state.focus = state.focus === pi ? -1 : pi; render(); return;
+    }
     state.lastTouch = Date.now();
     if (b.hasAttribute("data-dayoff")) {
       var keep = select(classesToday(viewNow(gymNow())), viewNow(gymNow())).sel;
@@ -456,8 +488,10 @@
       return lo;
     };
     var layouts = ["minmax(0, 1fr)"];
-    if (n >= 2) {
-      var len = items.map(function (li) { return Math.max(40, li.textContent.length); });
+    if (parts && parts.classList.contains("has-focus")) {
+      layouts = [items.map(function (li) { return li.classList.contains("is-focus") ? "minmax(0, 1fr)" : "11vw"; }).join(" ")];
+    } else if (n >= 2) {
+      var len = items.map(function (li) { var t = li.querySelector(".wod-text"); return Math.max(40, t ? t.textContent.length : 0); });
       layouts = ["minmax(0, 1fr)", "repeat(2, minmax(0, 1fr))"];
       if (n === 2) {
         var r = Math.min(2.5, Math.max(0.4, len[1] / len[0]));
