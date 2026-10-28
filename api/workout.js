@@ -12,8 +12,7 @@
  */
 "use strict";
 
-// Current Wodify API host first; the older api.wodify.com host as a fallback
-const HOSTS = ["https://app-api.wodify.com/v1", "https://api.wodify.com/v1"];
+const HOSTS = ["https://api.wodify.com/v1"];
 const API = HOSTS[0];
 const LOCATION = process.env.WODIFY_LOCATION || "Whit Fitness";
 const TZ = "America/Los_Angeles";
@@ -117,7 +116,7 @@ async function fromFormatted(key, date, prog) {
   const { status, body } = await wodify(`/workouts/formattedworkout${q}`, key);
   const wod = pick(body, "APIWod") || body;
   const err = pick(body, "APIError");
-  if (status !== 200 || err || !wod || typeof wod !== "object") {
+  if (status !== 200 || err || !wod || typeof wod !== "object" || body._raw !== undefined) {
     return { ok: false, status, error: err ? toText(pick(err, "ErrorMessage")) : `HTTP ${status}`, raw: body };
   }
   const header = pick(wod, "WodHeader", "Header") || {};
@@ -140,7 +139,7 @@ async function fromSearch(key, date, prog) {
   const s = await wodify(`/workouts/search?q=${q}&page_size=5`, key);
   const rows = asArray(pick(s.body, "workouts", "records", "data", "items") || s.body);
   const hit = rows.find((w) => w && pick(w, "id", "workout_id"));
-  if (s.status !== 200 || !hit) return { ok: false, status: s.status, error: "Not found", raw: s.body };
+  if (s.status !== 200 || !hit || s.body._raw !== undefined) return { ok: false, status: s.status, error: "Not found", raw: s.body };
   const one = await wodify(`/workouts/${pick(hit, "id", "workout_id")}`, key);
   const w = pick(one.body, "workout", "data") || one.body;
   const comps = normComponents(pick(w, "components", "workout_components"));
@@ -181,7 +180,8 @@ module.exports = async function handler(req, res) {
   const programs = {};
   const raw = {};
   for (const [k, r] of entries) {
-    programs[k] = r.ok ? { found: true, program: PROGRAMS[k].name, ...r.workout } : { found: false, program: PROGRAMS[k].name };
+    const has = r.ok && r.workout && (r.workout.components.length || r.workout.html || r.workout.notes);
+    programs[k] = has ? { found: true, program: PROGRAMS[k].name, ...r.workout } : { found: false, program: PROGRAMS[k].name };
     if (debug) raw[k] = r;
   }
   // Cache at Vercel's edge for 2 minutes so a busy morning doesn't hammer Wodify,
