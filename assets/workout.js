@@ -12,7 +12,9 @@
      Nobody answers? It switches by itself when the class starts. "Stay" keeps the
      current workout up.
    - The program switcher (right side; bottom bar on phones) opens any program's
-     workout. If nobody touches the screen for 20 minutes it goes back to live.
+     workout (or another day) and stays there until the next class comes around:
+     the pop-up appears 10 min before, and it switches at class start unless
+     someone taps "Stay".
    - Rolls over to the new day's workouts after midnight.
 
    Preview another time: /workout?at=17:40&day=2  (day 0 = Sunday). Add &tv=1 for TV mode. */
@@ -26,7 +28,6 @@
   var DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   var LEAD = 10;                 // minutes before a class that the pop-up / switch happens
-  var IDLE_REVERT = 20 * 60e3;   // manual choice reverts to live after this long untouched
 
   // Schedule program -> Wodify program that holds its workout
   var WORKOUT_OF = { crossfit: "crossfit", lift: "crossfit", hyrox: "hyrox", vitality: "vitality" };
@@ -129,40 +130,44 @@
 
   /* ---------- choose what to show ---------- */
   function select(list, now) {
+    var real = gymNow();
+    var today = now.other ? classesToday(real) : list;   // pop-ups always follow today's real schedule
     var auto = autoPick(list, now);
 
-    // A class someone was warned about has started: switch, unless they said stay
-    if (now.other) { if (state.toastId) hideToast(); }
-    else if (state.toastId) {
-      var t = byId(list, state.toastId);
+    // A class someone was warned about has started: switch to it (back to today if needed), unless they said stay
+    if (state.toastId) {
+      var t = byId(today, state.toastId);
       if (!t || state.dismissed[state.toastId]) { hideToast(); }
-      else if (t.when !== "later") { state.manual = t.id; state.follow = true; state.manualProgram = null; hideToast(); }
-    }
-    // Untouched for a while: back to live
-    if ((state.manual || state.manualProgram || state.offset) && Date.now() - state.lastTouch > IDLE_REVERT) {
-      state.manual = null; state.manualProgram = null; state.follow = false; state.offset = 0; setUrl(null);
-      return select(classesToday(gymNow()), gymNow());
+      else if (t.when !== "later") {
+        state.manual = t.id; state.follow = true; state.manualProgram = null; hideToast();
+        if (state.offset) { state.offset = 0; setUrl(null); return select(today, real); }
+      }
     }
 
+    // A person's choice stays on screen until the next class comes around (no timeout)
     var sel = null;
     if (state.manual) sel = byId(list, state.manual);
     if (!sel && state.manualProgram && WORKOUT_OF[state.manualProgram]) {
       var wk = WORKOUT_OF[state.manualProgram];
       sel = classForProgram(list, wk) || (now.other ? null : { x: { n: LABEL[wk], p: wk }, wk: wk, when: "none", id: "none-" + wk });
     }
+    // Pinned to a program whose next class is coming up? Same workout, so just move along to that class quietly
+    if (!now.other && sel && sel.wk && state.manual) {
+      var nx = list.filter(function (c) {
+        return c.wk === sel.wk && c.start > (sel.start || 0) && (c.when === "now" || (c.when === "later" && c.start - now.min <= LEAD));
+      })[0];
+      if (nx) { state.manual = nx.id; state.follow = true; sel = nx; }
+    }
     if (sel && auto && sel.id === auto.id && state.follow) { state.manual = null; state.follow = false; sel = null; } // caught up with live
     var live = !sel && !now.other;
     if (!sel) sel = auto;
-    if (now.other) return { sel: sel, live: false };
 
-    // Next class of a different program coming up? Offer it.
-    var up = null;
-    if (sel && sel.wk) {
-      up = list.filter(function (c) {
-        return c.wk && c.wk !== sel.wk && c.when === "later" && c.start - now.min <= LEAD && !state.dismissed[c.id];
-      })[0] || null;
-    }
-    if (up) showToast(up, sel); else if (state.toastId) hideToast();
+    // Next class of a different program (or any class, when another day is on screen) coming up? Offer it.
+    var up = today.filter(function (c) {
+      return c.wk && c.when === "later" && c.start - real.min <= LEAD && !state.dismissed[c.id] &&
+        (now.other || !sel || c.wk !== sel.wk);
+    })[0] || null;
+    if (up) showToast(up, sel, now); else if (state.toastId) hideToast();
     return { sel: sel, live: live };
   }
 
@@ -332,7 +337,8 @@
   }
 
   /* ---------- pop-up ---------- */
-  function showToast(up, sel) {
+  function showToast(up, sel, now) {
+    var stay = now && now.other ? DAYS[now.day] : sel ? (sel.x.p === "lift" ? sel.x.n : SHORT[sel.wk] || sel.x.n) : "this";
     var label = LABEL[up.wk];
     if (state.toastId !== up.id) {
       state.toastId = up.id;
@@ -341,7 +347,7 @@
         '<p class="wod-toast-msg"><b>' + esc(label) + " starts at " + fmt(up.x.t) + "</b>" +
         "Looks like " + esc(SHORT[up.wk]) + " class is starting soon. Want to show that workout?</p>" +
         '<div class="wod-toast-btns"><button type="button" class="btn" data-toast="go">Show ' + esc(SHORT[up.wk]) + "</button>" +
-        '<button type="button" class="btn btn-ghost" data-toast="stay">Stay on ' + esc(sel.x.p === "lift" ? sel.x.n : SHORT[sel.wk]) + "</button></div>" +
+        '<button type="button" class="btn btn-ghost" data-toast="stay">Stay on ' + esc(stay) + "</button></div>" +
         '<p class="wod-toast-count" data-toast-count></p>';
       els.toast.hidden = false;
       requestAnimationFrame(function () { els.toast.classList.add("is-in"); });
@@ -379,8 +385,8 @@
     if (b.hasAttribute("data-tv")) { enterTv(); return; }
     if (b.hasAttribute("data-toast")) {
       var id = state.toastId;
-      if (b.getAttribute("data-toast") === "go") { state.manual = id; state.follow = true; state.manualProgram = null; }
-      else {
+      if (b.getAttribute("data-toast") === "go") { state.manual = id; state.follow = true; state.manualProgram = null; state.offset = 0; }
+      else if (!state.offset) {
         var cur = select(list, gymNow()).sel;            // pin what's on screen now
         if (cur && cur.id.indexOf("none-") !== 0) { state.manual = cur.id; state.follow = false; }
       }
