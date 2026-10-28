@@ -398,6 +398,29 @@
     if (s <= 0) render();
   }
 
+  /* ---------- TV: slide parts between layouts ---------- */
+  function partRects() {
+    return [].map.call(els.body.querySelectorAll(".wod-part"), function (li) { return li.getBoundingClientRect(); });
+  }
+  // FLIP: each part starts where it was, then glides and resizes into its new spot while its contents fade in
+  function slideParts(before) {
+    if (!before.length || !Element.prototype.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var ease = "cubic-bezier(.22,.8,.24,1)";
+    [].forEach.call(els.body.querySelectorAll(".wod-part"), function (li, i) {
+      var f = before[i], l = li.getBoundingClientRect();
+      if (!f || !l.width || !l.height) return;
+      var bg = getComputedStyle(li).backgroundColor;
+      li.animate([
+        { transformOrigin: "0 0", backgroundColor: "#1b241e", transform: "translate(" + (f.left - l.left) + "px," + (f.top - l.top) + "px) scale(" + f.width / l.width + "," + f.height / l.height + ")" },
+        { transformOrigin: "0 0", backgroundColor: "#1b241e", offset: 0.7 },
+        { transformOrigin: "0 0", backgroundColor: bg, transform: "none" }
+      ], { duration: 520, easing: ease });
+      [].forEach.call(li.children, function (ch) {
+        ch.animate([{ opacity: 0 }, { opacity: 0, offset: 0.35 }, { opacity: 1 }], { duration: 520, easing: "ease-out" });
+      });
+    });
+  }
+
   /* ---------- events ---------- */
   document.addEventListener("click", function (e) {
     var b = e.target.closest("[data-notes],[data-part],[data-class],[data-program],[data-live],[data-toast],[data-tv],[data-dayoff]");
@@ -408,7 +431,8 @@
     }
     if (b.hasAttribute("data-part")) {                 // TV: blow one part up, tap it again to go back
       var pi = +b.getAttribute("data-part");
-      state.focus = state.focus === pi ? -1 : pi; render(); return;
+      var before = partRects();
+      state.focus = state.focus === pi ? -1 : pi; render(); slideParts(before); return;
     }
     state.lastTouch = Date.now();
     if (b.hasAttribute("data-dayoff")) {
