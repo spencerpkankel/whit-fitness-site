@@ -974,7 +974,7 @@ body:has(.mobile-nav[data-open="true"]) .wb-buddy { display: none; }
   .wod-grid { grid-template-columns: minmax(0, 1fr); }
   .wod-page { padding-bottom: 5.5rem; }
   .wod-switch {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; order: 0;
+    position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 50; order: 0;
     padding: 0.5rem 0.6rem calc(0.5rem + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96);
     border-top: 1px solid var(--line); backdrop-filter: blur(8px);
   }
@@ -1058,3 +1058,26 @@ body.tv .wod-toast-msg { font-size: 2.1vh; }
 body.tv .wod-toast-msg b { font-size: 4.2vh; }
 body.tv .wod-toast .btn { font-size: 1.9vh; min-height: 5vh; }
 body.tv .wod-toast-count { font-size: 1.7vh; }
+
+/* /workout day bar: Mon–Sun of this week */
+.wod-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.4rem; margin-top: 1.25rem; max-width: 52rem; }
+.wod-days button {
+  all: unset; box-sizing: border-box; cursor: pointer; text-align: center; padding: 0.55rem 0.3rem 0.6rem;
+  border-radius: var(--r-md); background: #fff; border: 1.5px solid var(--line); line-height: 1.15;
+  transition: border-color .15s ease;
+}
+.wod-days button:hover { border-color: var(--forest); }
+.wod-days button:focus-visible { outline: 3px solid var(--forest); outline-offset: 2px; }
+.wod-days .dn { display: block; font-weight: 700; font-size: 0.95rem; }
+.wod-days .dd { display: block; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wod-days .is-today { border-color: var(--forest); }
+.wod-days .is-future .dn, .wod-days .is-future .dd { opacity: 0.6; }
+.wod-days button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.wod-days button[aria-selected="true"] .dd { color: var(--lime); }
+.wod-days button[aria-selected="true"] .dn, .wod-days button[aria-selected="true"] .dd { opacity: 1; }
+@media (max-width: 520px) {
+  .wod-days { gap: 0.25rem; }
+  .wod-days button { padding: 0.45rem 0.1rem; }
+  .wod-days .dn { font-size: 0.8rem; }
+  .wod-days .dd { font-size: 0.72rem; }
+}

@@ -36,7 +36,7 @@
 
   var q = function (s) { return document.querySelector(s); };
   var els = {
-    date: q("[data-wod-date]"), classes: q("[data-wod-classes]"), open: q("[data-wod-open]"),
+    date: q("[data-wod-date]"), days: q("[data-wod-days]"), classes: q("[data-wod-classes]"), open: q("[data-wod-open]"),
     tabs: q("[data-wod-tabs]"), status: q("[data-wod-status]"), title: q("[data-wod-title]"),
     meta: q("[data-wod-meta]"), body: q("[data-wod-body]"), live: q("[data-wod-live]"), toast: q("[data-wod-toast]")
   };
@@ -50,7 +50,9 @@
     manualProgram: params.get("program"),      // program with no class today
     dismissed: {},                             // class ids someone said "stay" to
     toastId: null, toastAt: 0,
-    lastTouch: Date.now(), day: null, loadedAt: Date.now()
+    lastTouch: Date.now(), day: null, loadedAt: Date.now(),
+    offset: 0,                                 // day being viewed, relative to today (Mon..Sun of this week)
+    days: {}                                   // workouts per date: { "2026-10-26": { data, error } }
   };
 
   /* ---------- time ---------- */
@@ -80,6 +82,19 @@
   function fmtShort(t) { return fmt(t).replace(":00", ""); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function dur(x) { return x.dur || 60; }
+  function isoToday() {
+    try { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+    catch (e) { return new Date().toISOString().slice(0, 10); }
+  }
+  function isoAdd(iso, n) { var d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function mondayOffset(now) { return -((now.day + 6) % 7); }          // days from today back to Monday
+  // The "now" used for the day on screen: today is live; past days are over; future days haven't started
+  function viewNow(now) {
+    if (!state.offset) return now;
+    var iso = isoAdd(isoToday(), state.offset), d = new Date(iso + "T12:00:00Z");
+    return { day: (now.day + state.offset + 7) % 7, min: state.offset < 0 ? 24 * 60 : -1, sec: 0,
+      month: d.getUTCMonth(), date: d.getUTCDate(), other: true };
+  }
 
   /* ---------- schedule ---------- */
   function classesToday(now) {
@@ -117,25 +132,28 @@
     var auto = autoPick(list, now);
 
     // A class someone was warned about has started: switch, unless they said stay
-    if (state.toastId) {
+    if (now.other) { if (state.toastId) hideToast(); }
+    else if (state.toastId) {
       var t = byId(list, state.toastId);
       if (!t || state.dismissed[state.toastId]) { hideToast(); }
       else if (t.when !== "later") { state.manual = t.id; state.follow = true; state.manualProgram = null; hideToast(); }
     }
     // Untouched for a while: back to live
-    if ((state.manual || state.manualProgram) && Date.now() - state.lastTouch > IDLE_REVERT) {
-      state.manual = null; state.manualProgram = null; state.follow = false; setUrl(null);
+    if ((state.manual || state.manualProgram || state.offset) && Date.now() - state.lastTouch > IDLE_REVERT) {
+      state.manual = null; state.manualProgram = null; state.follow = false; state.offset = 0; setUrl(null);
+      return select(classesToday(gymNow()), gymNow());
     }
 
     var sel = null;
     if (state.manual) sel = byId(list, state.manual);
     if (!sel && state.manualProgram && WORKOUT_OF[state.manualProgram]) {
       var wk = WORKOUT_OF[state.manualProgram];
-      sel = classForProgram(list, wk) || { x: { n: LABEL[wk], p: wk }, wk: wk, when: "none", id: "none-" + wk };
+      sel = classForProgram(list, wk) || (now.other ? null : { x: { n: LABEL[wk], p: wk }, wk: wk, when: "none", id: "none-" + wk });
     }
     if (sel && auto && sel.id === auto.id && state.follow) { state.manual = null; state.follow = false; sel = null; } // caught up with live
-    var live = !sel;
+    var live = !sel && !now.other;
     if (!sel) sel = auto;
+    if (now.other) return { sel: sel, live: false };
 
     // Next class of a different program coming up? Offer it.
     var up = null;
@@ -152,17 +170,36 @@
   function render() {
     var now = gymNow();
     if (state.day !== null && state.day !== now.day) {       // new day
-      state.manual = null; state.manualProgram = null; state.dismissed = {}; hideToast(); setUrl(null); load();
+      state.manual = null; state.manualProgram = null; state.dismissed = {}; state.offset = 0; state.days = {}; hideToast(); setUrl(null); load();
     }
     state.day = now.day;
-    var list = classesToday(now);
-    var pick = select(list, now);
-    els.date.textContent = DAYS[now.day] + ", " + MONTHS[now.month] + " " + now.date;
+    renderDays(now);
+    var vnow = viewNow(now);
+    var iso = isoAdd(isoToday(), state.offset);
+    var slot = state.days[iso] || {};
+    state.data = slot.data || null; state.error = slot.error || null;
+    if (state.offset < 0 && !slot.data && !slot.error && !slot.loading) load(iso);
+    var list = classesToday(vnow);
+    var pick = select(list, vnow);
+    els.date.textContent = DAYS[vnow.day] + ", " + MONTHS[vnow.month] + " " + vnow.date;
     renderRail(list, pick.sel);
-    renderSwitch(list, pick.sel);
-    renderWorkout(pick.sel, now, pick.live);
-    renderOpenGym(now);
+    renderSwitch(list, pick.sel, vnow);
+    renderWorkout(pick.sel, vnow, pick.live);
+    renderOpenGym(vnow);
     if (TV) fitTv();
+  }
+
+  function renderDays(now) {
+    if (!els.days) return;
+    var mon = mondayOffset(now), today = isoToday(), html = "";
+    for (var i = 0; i < 7; i++) {
+      var off = mon + i, d = new Date(isoAdd(today, off) + "T12:00:00Z"), wd = (now.day + off + 7) % 7;
+      html += '<button type="button" role="tab" data-dayoff="' + off + '" aria-selected="' + (off === state.offset) + '"' +
+        ' class="' + (off === 0 ? "is-today" : off > 0 ? "is-future" : "is-past") + '">' +
+        '<span class="dn">' + (off === 0 ? "Today" : DAYS[wd].slice(0, 3)) + '</span><span class="dd">' +
+        (off === 0 ? DAYS[wd].slice(0, 3) + " " : "") + d.getUTCDate() + "</span></button>";
+    }
+    els.days.innerHTML = html;
   }
 
   function renderRail(list, sel) {
@@ -177,17 +214,18 @@
       if (!c.wk) return '<li class="' + cls.join(" ") + '"><a href="/youth">' + inner + "</a></li>";
       return '<li class="' + cls.join(" ") + '"><button type="button" data-class="' + esc(c.id) + '"' +
         (sel && c.id === sel.id ? ' aria-current="true"' : "") + ">" + inner + "</button></li>";
-    }).join("") || '<li class="wod-empty">No classes on the schedule today.</li>';
+    }).join("") || '<li class="wod-empty">No classes on the schedule this day.</li>';
   }
 
-  function renderSwitch(list, sel) {
+  function renderSwitch(list, sel, now) {
     var progs = state.data && state.data.programs || {};
     els.tabs.innerHTML = TAB_ORDER.map(function (k) {
       var m = list.filter(function (c) { return c.wk === k; });
       var on = m.filter(function (c) { return c.when === "now"; })[0];
       var nx = m.filter(function (c) { return c.when === "later"; })[0];
-      var sub = on ? "On now" : nx ? fmt(nx.x.t) : m.length ? "Done today" : "No class today";
-      var posted = !state.data || (progs[k] && progs[k].found);
+      var sub = on ? "On now" : now && now.other ? (m.length ? m.map(function (c) { return fmtShort(c.x.t); }).slice(0, 2).join(", ") + (m.length > 2 ? "…" : "") : "No class")
+        : nx ? fmt(nx.x.t) : m.length ? "Done today" : "No class today";
+      var posted = state.offset > 0 || !state.data || (progs[k] && progs[k].found);
       return '<button type="button" class="k-' + k + (on ? " has-now" : "") + (posted ? "" : " is-empty") +
         '" data-program="' + k + '" aria-pressed="' + (sel && sel.wk === k) + '"><span class="sw" aria-hidden="true"></span>' +
         '<span class="nm">' + SHORT[k] + '</span><span class="sb">' + (posted ? sub : "Not posted yet") + "</span></button>";
@@ -196,6 +234,7 @@
   }
 
   function statusText(c, now) {
+    if (now.other && c) return DAYS[now.day] + " · " + fmt(c.x.t) + (state.offset < 0 ? " class" : "");
     if (!c || c.when === "none") return "No " + (c ? LABEL[c.wk] : "") + " class today";
     if (c.when === "now") return "On now · until " + fmt(hm(c.end));
     if (c.when === "done") return "Earlier today · " + fmt(c.x.t) + " class";
@@ -231,14 +270,20 @@
     els.meta.textContent = meta.join(" · ");
     els.live.innerHTML = liveNote(live);
 
+    if (state.offset > 0) {
+      els.body.innerHTML = '<p class="wod-missing">' + esc(DAYS[now.day]) + "'s workouts go up on " + esc(DAYS[now.day]) +
+        '. Members can check the Wodify app.</p>';
+      return;
+    }
     if (state.error && !state.data) {
-      els.body.innerHTML = '<p class="wod-missing">We couldn\'t load today\'s workout just now. It\'s also in the Wodify app.</p>';
+      els.body.innerHTML = '<p class="wod-missing">We couldn\'t load this workout just now. It\'s also in the Wodify app.</p>';
       return;
     }
     if (!state.data) { els.body.innerHTML = '<div class="wod-skel" aria-hidden="true"><i></i><i></i><i></i></div>'; return; }
     if (!w || !w.found) {
       var others = TAB_ORDER.filter(function (k) { return k !== c.wk && state.data.programs[k] && state.data.programs[k].found; });
-      els.body.innerHTML = '<p class="wod-missing">Today\'s ' + esc(LABEL[c.wk]) + " workout hasn't been posted yet. Check back closer to class, or open the Wodify app.</p>" +
+      els.body.innerHTML = '<p class="wod-missing">' + (now.other ? "No " + esc(LABEL[c.wk]) + " workout was posted for " + esc(DAYS[now.day]) + ".</p>"
+        : "Today's " + esc(LABEL[c.wk]) + " workout hasn't been posted yet. Check back closer to class, or open the Wodify app.</p>") +
         (others.length ? '<p class="small muted">Posted today: ' + others.map(function (k) {
           return '<button type="button" class="linkish" data-program="' + k + '">' + LABEL[k] + "</button>";
         }).join(", ") + "</p>" : "");
@@ -272,11 +317,13 @@
   }
 
   function liveNote(live) {
+    if (state.offset) return '<button type="button" class="linkish" data-live>Back to today</button>';
     return live ? '<span class="wod-live-dot" aria-hidden="true"></span>Follows the class schedule'
       : '<button type="button" class="linkish" data-live>Back to the live class</button>';
   }
 
   function renderOpenGym(now) {
+    if (now.other) { els.open.innerHTML = 'Members have 24/7 keycode access. <a href="/schedule">Full schedule</a>'; return; }
     var open = SCHEDULE.filter(function (x) { return x.d === now.day && x.p === "open" && toMin(x.end) > now.min; });
     var cur = open.filter(function (x) { return toMin(x.t) <= now.min; })[0];
     els.open.innerHTML = (cur ? "Open gym now until " + fmtShort(cur.end) + ". "
@@ -317,10 +364,18 @@
 
   /* ---------- events ---------- */
   document.addEventListener("click", function (e) {
-    var b = e.target.closest("[data-class],[data-program],[data-live],[data-toast],[data-tv]");
+    var b = e.target.closest("[data-class],[data-program],[data-live],[data-toast],[data-tv],[data-dayoff]");
     if (!b) return;
     state.lastTouch = Date.now();
-    var list = classesToday(gymNow());
+    if (b.hasAttribute("data-dayoff")) {
+      var keep = select(classesToday(viewNow(gymNow())), viewNow(gymNow())).sel;
+      state.offset = +b.getAttribute("data-dayoff");
+      state.manual = null; state.follow = false;
+      state.manualProgram = state.offset && keep && keep.wk ? keep.wk : null;   // stay on the same program if that day has it
+      setUrl(null); render(); return;
+    }
+    var vn = viewNow(gymNow());
+    var list = classesToday(vn);
     if (b.hasAttribute("data-tv")) { enterTv(); return; }
     if (b.hasAttribute("data-toast")) {
       var id = state.toastId;
@@ -331,16 +386,17 @@
       }
       state.dismissed[id] = true; hideToast(); setUrl(null); render(); return;
     }
-    var auto = autoPick(list, gymNow());
+    var auto = autoPick(list, vn);
     state.follow = false;
-    if (b.hasAttribute("data-live")) { state.manual = null; state.manualProgram = null; setUrl(null); }
+    if (b.hasAttribute("data-live")) { state.manual = null; state.manualProgram = null; state.offset = 0; setUrl(null); }
     else if (b.hasAttribute("data-class")) {
       var id2 = b.getAttribute("data-class");
       state.manual = auto && auto.id === id2 ? null : id2; state.manualProgram = null; setUrl(null);
     } else {
       var k = b.getAttribute("data-program");
       var c = classForProgram(list, k);
-      if (auto && auto.wk === k) { state.manual = null; state.manualProgram = null; setUrl(null); }   // that's live already
+      if (vn.other) { state.manual = c ? c.id : null; state.manualProgram = c ? null : k; }
+      else if (auto && auto.wk === k) { state.manual = null; state.manualProgram = null; setUrl(null); }   // that's live already
       else { state.manual = c ? c.id : null; state.manualProgram = c ? null : k; setUrl(k); }
     }
     render();
@@ -398,18 +454,21 @@
   }
 
   /* ---------- data ---------- */
-  function load() {
-    return fetch("/api/workout", { headers: { accept: "application/json" }, cache: "no-store" })
+  function load(iso) {
+    var today = isoToday(); iso = iso || today;
+    var slot = state.days[iso] = state.days[iso] || {};
+    slot.loading = true;
+    return fetch("/api/workout" + (iso === today ? "" : "?date=" + iso), { headers: { accept: "application/json" }, cache: "no-store" })
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (j) { if (!j || !j.programs) throw new Error("bad response"); state.data = j; state.error = null; })
-      .catch(function (err) { state.error = err; })      // keep showing the last good workout
-      .then(render);
+      .then(function (j) { if (!j || !j.programs) throw new Error("bad response"); slot.data = j; slot.error = null; })
+      .catch(function (err) { slot.error = err; })      // keep showing the last good workout
+      .then(function () { slot.loading = false; render(); });
   }
 
   render();
   load();
   setInterval(render, 20 * 1000);
   setInterval(tickToast, 1000);
-  setInterval(load, 5 * 60 * 1000);
+  setInterval(function () { load(); }, 5 * 60 * 1000);
   document.addEventListener("visibilitychange", function () { if (!document.hidden) { load(); keepAwake(); } });
 })();

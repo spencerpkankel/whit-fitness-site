@@ -172,7 +172,21 @@ module.exports = async function handler(req, res) {
   }
   const url = new URL(req.url, "http://x");
   const debug = process.env.WORKOUT_DEBUG_KEY && url.searchParams.get("debug") === process.env.WORKOUT_DEBUG_KEY;
-  const date = gymDate();
+  // Today by default; ?date= may ask for an earlier day this week (Mon..today), never a future one
+  const today = gymDate();
+  let date = today;
+  const asked = url.searchParams.get("date");
+  if (asked) {
+    const wd = new Date(today + "T12:00:00Z").getUTCDay();             // 0 = Sunday
+    const monday = new Date(today + "T12:00:00Z"); monday.setUTCDate(monday.getUTCDate() - ((wd + 6) % 7));
+    const mon = monday.toISOString().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(asked) || asked > today || asked < mon) {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ error: "date_out_of_range", message: "Only this week's days up to today are available." }));
+      return;
+    }
+    date = asked;
+  }
 
   const entries = await Promise.all(
     Object.entries(PROGRAMS).map(async ([k, prog]) => [k, await loadProgram(key, date, prog)])
@@ -186,7 +200,7 @@ module.exports = async function handler(req, res) {
   }
   // Cache at Vercel's edge for 2 minutes so a busy morning doesn't hammer Wodify,
   // while a workout your coaches just posted still shows up quickly.
-  res.setHeader("Cache-Control", debug ? "no-store" : "public, s-maxage=120, stale-while-revalidate=600");
+  res.setHeader("Cache-Control", debug ? "no-store" : date < today ? "public, s-maxage=3600, stale-while-revalidate=86400" : "public, s-maxage=120, stale-while-revalidate=600");
   res.statusCode = 200;
   let probe;
   if (debug) {
