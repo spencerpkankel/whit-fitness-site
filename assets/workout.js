@@ -305,6 +305,12 @@
     return n(t) === n(b) || n(t).indexOf(n(b).replace(/55$/, "")) === 0 || ["crossfit", "hyrox", "vitality"].indexOf(n(t)) > -1;
   }
 
+  // On the TVs a blank line becomes a small gap instead of a full empty line, so the text can run bigger
+  function paras(t) {
+    if (!TV) return esc(t);
+    return String(t).split(/\n\s*\n/).map(function (x) { return '<span class="tv-p">' + esc(x.trim()) + "</span>"; }).join("");
+  }
+
   function workoutHtml(w) {
     var out = "";
     if (w.notes) out += '<p class="wod-notes">' + esc(w.notes) + "</p>";
@@ -312,8 +318,8 @@
       out += '<ol class="wod-parts" data-n="' + w.components.length + '">' + w.components.map(function (p, i) {
         return '<li class="wod-part' + (p.section ? " is-section" : "") + '">' +
           (p.name ? '<h3><span class="wod-letter" aria-hidden="true">' + String.fromCharCode(65 + i) + "</span>" + esc(p.name) + (p.score ? '<span class="wod-score">' + esc(p.score) + "</span>" : "") + "</h3>" : "") +
-          (p.text ? '<div class="wod-text">' + esc(p.text) + "</div>" : "") +
-          (p.notes ? '<div class="wod-coach"><b>Coach notes</b>' + esc(p.notes) + "</div>" : "") + "</li>";
+          (p.text ? '<div class="wod-text">' + paras(p.text) + "</div>" : "") +
+          (p.notes ? '<div class="wod-coach"><b>Coach notes</b>' + paras(p.notes) + "</div>" : "") + "</li>";
       }).join("") + "</ol>";
     } else if (w.html) {
       out += '<div class="wod-html">' + w.html + "</div>"; // sanitized server-side
@@ -431,17 +437,43 @@
     if (!TV || !("wakeLock" in navigator) || document.hidden) return;
     navigator.wakeLock.request("screen").then(function (l) { wakeLock = l; }).catch(function () {});
   }
-  // Shrink the workout text until it fits the screen without scrolling
+  // Make the workout text as big as the screen allows: try a few column layouts
+  // (1, 2 or 3 columns; 2 columns weighted by how long each part is) and keep
+  // whichever fits the largest text without scrolling.
   function fitTv() {
     var body = els.body;
     var parts = body.querySelector(".wod-parts");
-    var n = parts ? +parts.getAttribute("data-n") : 1;
-    body.style.setProperty("--tv-cols", n <= 1 ? 1 : n === 2 ? 2 : n === 4 ? 2 : 3);
-    var size = 4.2;                                  // vh
-    body.style.fontSize = size + "vh";
-    while (size > 1.3 && (body.scrollHeight > body.clientHeight + 2 || body.scrollWidth > body.clientWidth + 2)) {
-      size -= 0.1; body.style.fontSize = size.toFixed(2) + "vh";
+    var items = parts ? [].slice.call(parts.children) : [];
+    var n = items.length;
+    var fits = function () { return body.scrollHeight <= body.clientHeight + 2 && body.scrollWidth <= body.clientWidth + 2; };
+    var biggest = function () {                      // binary search, in vh
+      var lo = 1.3, hi = 9;
+      body.style.fontSize = hi + "vh"; if (fits()) return hi;
+      for (var i = 0; i < 12; i++) {
+        var mid = (lo + hi) / 2; body.style.fontSize = mid + "vh";
+        if (fits()) lo = mid; else hi = mid;
+      }
+      return lo;
+    };
+    var layouts = ["minmax(0, 1fr)"];
+    if (n >= 2) {
+      var len = items.map(function (li) { return Math.max(40, li.textContent.length); });
+      layouts = ["minmax(0, 1fr)", "repeat(2, minmax(0, 1fr))"];
+      if (n === 2) {
+        var r = Math.min(2.5, Math.max(0.4, len[1] / len[0]));
+        layouts.push("minmax(0, 1fr) minmax(0, " + r.toFixed(2) + "fr)");
+        layouts.push("minmax(0, 1fr) minmax(0, " + Math.sqrt(r).toFixed(2) + "fr)");
+      }
+      if (n >= 3) layouts.push("repeat(3, minmax(0, 1fr))");
     }
+    var best = { size: 0, grid: null };
+    layouts.forEach(function (g) {
+      if (parts) parts.style.gridTemplateColumns = g || "";
+      var s = biggest();
+      if (s > best.size + 0.05) best = { size: s, grid: g };
+    });
+    if (parts) parts.style.gridTemplateColumns = best.grid || "";
+    body.style.fontSize = best.size.toFixed(2) + "vh";
   }
   if (TV) {
     document.body.classList.add("tv");
