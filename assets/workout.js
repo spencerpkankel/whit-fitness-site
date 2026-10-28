@@ -306,7 +306,7 @@
     if (w.components && w.components.length) {
       out += '<ol class="wod-parts" data-n="' + w.components.length + '">' + w.components.map(function (p, i) {
         return '<li class="wod-part' + (p.section ? " is-section" : "") + '">' +
-          (p.name ? '<h3><span class="wod-letter" aria-hidden="true">' + String.fromCharCode(65 + i) + "</span>" + esc(p.name) + "</h3>" : "") +
+          (p.name ? '<h3><span class="wod-letter" aria-hidden="true">' + String.fromCharCode(65 + i) + "</span>" + esc(p.name) + (p.score ? '<span class="wod-score">' + esc(p.score) + "</span>" : "") + "</h3>" : "") +
           (p.text ? '<div class="wod-text">' + esc(p.text) + "</div>" : "") +
           (p.notes ? '<div class="wod-coach"><b>Coach notes</b>' + esc(p.notes) + "</div>" : "") + "</li>";
       }).join("") + "</ol>";

@@ -111,6 +111,47 @@ function normComponents(list) {
   }).filter((c) => c.name || c.text || c.notes);
 }
 
+/* Wodify's FormattedWOD is nested <div>s:
+   <span> <div><div>NAME (Score type)</div><div>description… <div>notes</div></div></div> … </span>
+   Split it into sections so the page can show A / B / C with names and notes. */
+function topDivs(html) {
+  const out = [];
+  const re = /<(\/?)div\b[^>]*>/gi;
+  let depth = 0, start = -1, m;
+  while ((m = re.exec(html))) {
+    if (!m[1]) { if (depth === 0) start = re.lastIndex; depth++; }
+    else if (depth > 0) { depth--; if (depth === 0 && start >= 0) { out.push(html.slice(start, m.index)); start = -1; } }
+  }
+  return out;
+}
+function stripTopDivs(html) {
+  let out = "", depth = 0, last = 0, m;
+  const re = /<(\/?)div\b[^>]*>/gi;
+  while ((m = re.exec(html))) {
+    if (!m[1]) { if (depth === 0) out += html.slice(last, m.index); depth++; }
+    else if (depth > 0) { depth--; if (depth === 0) last = re.lastIndex; }
+  }
+  return depth === 0 ? out + html.slice(last) : out;
+}
+function parseFormatted(html) {
+  if (!html) return [];
+  const span = /<span\b[^>]*>([\s\S]*)<\/span>/i.exec(String(html));
+  const blocks = topDivs(span ? span[1] : String(html));
+  const parts = [];
+  for (const b of blocks) {
+    const kids = topDivs(b);
+    if (kids.length < 2) continue;
+    let name = toText(kids[0]), score = "";
+    const sm = /^(.*?)\s*\(([^()]+)\)\s*$/.exec(name);
+    if (sm) { name = sm[1].trim(); score = sm[2].trim(); }
+    const body = kids[1];
+    const notes = topDivs(body).map(toText).filter(Boolean).join("\n\n");
+    const text = toText(stripTopDivs(body));
+    if (name || text) parts.push({ name, score, text, notes, section: false });
+  }
+  return parts;
+}
+
 async function fromFormatted(key, date, prog) {
   const q = `?date=${date}&location=${encodeURIComponent(LOCATION)}&program=${encodeURIComponent(prog.name)}`;
   const { status, body } = await wodify(`/workouts/formattedworkout${q}`, key);
@@ -120,15 +161,19 @@ async function fromFormatted(key, date, prog) {
     return { ok: false, status, error: err ? toText(pick(err, "ErrorMessage")) : `HTTP ${status}`, raw: body };
   }
   const header = pick(wod, "WodHeader", "Header") || {};
-  const comps = normComponents(pick(wod, "Components", "WodComponents"));
+  let comps = normComponents(pick(wod, "Components", "WodComponents"));
+  const formatted = pick(wod, "FormattedWOD", "FormattedWod", "Html");
+  if (!comps.length) comps = parseFormatted(formatted);
+  let title = toText(pick(header, "Name", "WodName", "Title") || pick(wod, "Name", "WodName"));
+  if (!title && formatted) { const t = topDivs(String(formatted)); const first = t.length ? topDivs(t[0]) : []; title = first.length ? toText(first[0]) : ""; }
   return {
     ok: true,
     raw: body,
     workout: {
-      title: toText(pick(header, "Name", "WodName", "Title") || pick(wod, "Name", "WodName")),
+      title,
       notes: toText(pick(header, "Comments", "Comment", "Notes") || pick(wod, "Comments", "Notes")),
       components: comps,
-      html: comps.length ? "" : cleanHtml(pick(wod, "FormattedWOD", "FormattedWod", "Html")),
+      html: comps.length ? "" : cleanHtml(formatted),
     },
   };
 }
@@ -202,21 +247,7 @@ module.exports = async function handler(req, res) {
   // while a workout your coaches just posted still shows up quickly.
   res.setHeader("Cache-Control", debug ? "no-store" : date < today ? "public, s-maxage=3600, stale-while-revalidate=86400" : "public, s-maxage=120, stale-while-revalidate=600");
   res.statusCode = 200;
-  let probe;
-  if (debug) {
-    // Which Wodify endpoints accept this key? (never echoes the key itself)
-    const paths = ["/locations", "/programs", "/workouts?page_size=1", "/classes?page_size=1", "/clients?page_size=1"];
-    probe = { key_length: key.length, key_charset: /^[A-Za-z0-9]+$/.test(key) ? "alphanumeric" : "has other characters" };
-    for (const h of HOSTS) for (const p of paths) {
-      const r = await wodifyAt(h, p, key).catch((e) => ({ status: "err", body: String(e) }));
-      probe[h.replace("https://", "") + p] = { status: r.status, body: JSON.stringify(r.body).slice(0, 200) };
-    }
-    const nokey = await fetch(API + "/locations").then(async (r) => ({ status: r.status, body: (await r.text()).slice(0, 160) })).catch((e) => String(e));
-    probe.without_key = nokey;
-    const bearer = await fetch(API + "/locations", { headers: { Authorization: "Bearer " + key } }).then(async (r) => ({ status: r.status, body: (await r.text()).slice(0, 160) })).catch((e) => String(e));
-    probe.bearer_header = bearer;
-  }
-  res.end(JSON.stringify(debug ? { date, programs, raw, probe } : { date, programs }));
+  res.end(JSON.stringify(debug ? { date, programs, raw } : { date, programs }));
 };
 
-module.exports._test = { toText, cleanHtml, normComponents, gymDate };
+module.exports._test = { toText, cleanHtml, normComponents, gymDate, parseFormatted };

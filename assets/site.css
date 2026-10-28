@@ -1081,3 +1081,6 @@ body.tv .wod-toast-count { font-size: 1.7vh; }
   .wod-days .dn { font-size: 0.8rem; }
   .wod-days .dd { font-size: 0.72rem; }
 }
+.wod-score { margin-left: auto; align-self: center; font-family: var(--body); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em; padding: 0.2rem 0.6rem; border-radius: var(--r-pill); background: var(--sage); color: var(--muted); white-space: nowrap; }
+.wod-part h3 { flex-wrap: wrap; }
+body.tv .wod-score { font-size: 0.42em; background: rgba(238,242,236,.1); color: #b9c6bb; padding: 0.25em 0.7em; }
