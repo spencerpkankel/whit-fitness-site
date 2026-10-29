@@ -51,7 +51,7 @@
     manualProgram: params.get("program"),      // program with no class today
     dismissed: {},                             // class ids someone said "stay" to
     toastId: null, toastAt: 0,
-    wkey: null, focus: -1, notesOpen: {},     // TV: which part is blown up, which coach notes are open
+    wkey: null, focus: -1, notesOpen: {}, vidsOpen: {},     // TV: which part is blown up, which coach notes are open
     lastTouch: Date.now(), day: null, loadedAt: Date.now(),
     offset: 0,                                 // day being viewed, relative to today (Mon..Sun of this week)
     days: {}                                   // workouts per date: { "2026-10-26": { data, error } }
@@ -296,9 +296,12 @@
       return;
     }
     var wkey = c.id + "|" + isoAdd(isoToday(), state.offset);
-    if (wkey !== state.wkey) { state.wkey = wkey; state.focus = -1; state.notesOpen = {}; }
+    if (wkey !== state.wkey) { state.wkey = wkey; state.focus = -1; state.notesOpen = {}; state.vidsOpen = {}; }
     var html = workoutHtml(w);
-    if (els.body.innerHTML !== html) els.body.innerHTML = html;
+    // Only redraw when something changed, so a demo video that's playing isn't cut off by the 20s refresh
+    if (els.body._html !== html || els.body.firstChild !== els.body._first) {
+      els.body.innerHTML = html; els.body._html = html; els.body._first = els.body.firstChild;
+    }
   }
 
   // Skip Wodify's default names ("CrossFit 10/27/2026", "Tuesday", "Vitality"): they repeat what's on screen
@@ -330,6 +333,25 @@
     return { text: m, notes: n };
   }
 
+  // Demo videos: a tucked-away card like the coach notes. Players only exist while it's open,
+  // so a closed card costs nothing (matters on the TVs).
+  function videosHtml(list, i) {
+    var vids = (list || []).filter(function (v) { return v && /^[A-Za-z0-9_-]{11}$/.test(v.id); });
+    if (!vids.length) return "";
+    var open = !!state.vidsOpen[i];
+    return '<div class="wod-vids' + (open ? " is-open" : "") + '"><button type="button" data-vids="' + i + '" aria-expanded="' + open + '">' +
+      "<b>Demo videos" + (vids.length > 1 ? ' <span class="wod-vids-n">' + vids.length + "</span>" : "") + "</b>" +
+      '<span class="wod-coach-i" aria-hidden="true"></span></button>' +
+      (open ? '<div class="wod-vids-body"><div class="wod-vids-strip" tabindex="0" aria-label="Demo videos, scroll sideways">' + vids.map(function (v, k) {
+        var src = "https://www.youtube-nocookie.com/embed/" + v.id + "?rel=0&amp;playsinline=1" + (v.start ? "&amp;start=" + (+v.start | 0) : "");
+        var label = v.label || (vids.length > 1 ? "Demo " + (k + 1) : "Demo");
+        return '<figure class="wod-vid"><div class="wod-vid-frame"><iframe src="' + src + '" title="' + esc(label) + '" loading="lazy" ' +
+          'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" ' +
+          'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe></div>' +
+          (v.label ? "<figcaption>" + esc(v.label) + "</figcaption>" : "") + "</figure>";
+      }).join("") + "</div></div>" : "") + "</div>";
+  }
+
   function workoutHtml(w) {
     var out = "";
     if (w.notes) out += '<p class="wod-notes">' + esc(w.notes) + "</p>";
@@ -343,7 +365,8 @@
           (p.name ? '<h3><span class="wod-letter" aria-hidden="true">' + String.fromCharCode(65 + i) + "</span>" + esc(p.name) + (p.score ? '<span class="wod-score">' + esc(p.score) + "</span>" : "") + "</h3>" : "") +
           (sp.text ? '<div class="wod-text">' + paras(sp.text) + "</div>" : "") +
           (sp.notes ? '<div class="wod-coach' + (open ? " is-open" : "") + '"><button type="button" data-notes="' + i + '" aria-expanded="' + open + '">' +
-            '<b>Coach notes</b><span class="wod-coach-i" aria-hidden="true"></span></button><div class="wod-coach-body">' + paras(sp.notes) + "</div></div>" : "") + "</li>";
+            '<b>Coach notes</b><span class="wod-coach-i" aria-hidden="true"></span></button><div class="wod-coach-body">' + paras(sp.notes) + "</div></div>" : "") +
+          videosHtml(p.videos, i) + "</li>";
       }).join("") + "</ol>";
     } else if (w.html) {
       out += '<div class="wod-html">' + w.html + "</div>"; // sanitized server-side
@@ -423,8 +446,13 @@
 
   /* ---------- events ---------- */
   document.addEventListener("click", function (e) {
-    var b = e.target.closest("[data-notes],[data-part],[data-class],[data-program],[data-live],[data-toast],[data-tv],[data-dayoff]");
+    if (e.target.closest(".wod-vids-body")) return;      // scrolling / tapping the video strip
+    var b = e.target.closest("[data-vids],[data-notes],[data-part],[data-class],[data-program],[data-live],[data-toast],[data-tv],[data-dayoff]");
     if (!b) return;
+    if (b.hasAttribute("data-vids")) {                 // open / close demo videos
+      var vi = +b.getAttribute("data-vids");
+      state.vidsOpen[vi] = b.getAttribute("aria-expanded") !== "true"; render(); return;
+    }
     if (b.hasAttribute("data-notes")) {                // open / close coach notes
       var ni = +b.getAttribute("data-notes");
       state.notesOpen[ni] = b.getAttribute("aria-expanded") !== "true"; render(); return;

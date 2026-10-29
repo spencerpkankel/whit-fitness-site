@@ -79,6 +79,56 @@ function cleanHtml(v) {
     .replace(/<(\/?)([a-z0-9]+)[^>]*>/gi, (m, slash, tag) => (OK.has(tag.toLowerCase()) ? `<${slash}${tag.toLowerCase()}>` : ""));
 }
 
+/* ---------- demo videos ----------
+   Coaches can drop a YouTube link into a part (pasted URL, hyperlink or Wodify's embedded video).
+   Pull those out before the HTML is flattened to text (which would throw the link away), so the
+   board can show them as players. Bare YouTube URLs are then removed from the text itself. */
+const YT = /(?:https?:)?\/\/(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^\s"'<>]*?&(?:amp;)?)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})([^\s"'<>]*)/gi;
+function ytStart(rest) {
+  const m = /[?&#](?:amp;)?(?:t|start)=(?:(\d+)h)?(?:(\d+)m)?(\d+)?s?/i.exec(rest || "");
+  if (!m) return 0;
+  return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
+}
+const URLISH = /^(https?:\/\/|www\.|youtu)/i;
+function videosIn(...sources) {
+  const out = [], seen = new Set();
+  const add = (id, rest, label) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const v = { id };
+    const s = ytStart(rest);
+    if (s) v.start = s;
+    if (label && !URLISH.test(label)) v.label = label.slice(0, 80);
+    out.push(v);
+  };
+  for (const src of sources) {
+    if (src == null) continue;
+    const s = String(src);
+    // Hyperlinks first, so their text can label the video
+    const a = /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    while ((m = a.exec(s))) {
+      YT.lastIndex = 0;
+      const y = YT.exec(m[1]);
+      if (y) add(y[1], y[2], toText(m[2]));
+    }
+    YT.lastIndex = 0;
+    while ((m = YT.exec(s))) add(m[1], m[2]);
+  }
+  return out;
+}
+// Drop bare YouTube URLs (and lines left holding only "Demo:" or similar) from plain text
+function stripVideoUrls(t) {
+  if (!t) return t;
+  return t.split("\n").map((l) => {
+    YT.lastIndex = 0;
+    if (!YT.test(l)) return l;
+    YT.lastIndex = 0;
+    const left = l.replace(YT, "").replace(/[\s:–—-]+$/, "").trim();
+    return /^[*•\s]*(demo|video|demo video|movement demo|watch|link|here)?[\s:–—-]*$/i.test(left) ? null : left;
+  }).filter((l) => l !== null).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 /* ---------- normalising Wodify's shapes ---------- */
 // Wodify's field names vary between endpoints (PascalCase vs snake_case), so look up loosely.
 function pick(o, ...names) {
@@ -103,12 +153,18 @@ function asArray(v) {
 }
 function normComponents(list) {
   return asArray(list).map((c) => {
+    const rawDesc = pick(c, "Description", "description", "ComponentDescription", "Details", "Text", "Prescription");
+    const rawNotes = pick(c, "Comment", "Comments", "Notes", "CoachNotes", "coach_notes", "AthleteNotes");
+    const videos = videosIn(rawDesc, rawNotes,
+      pick(c, "VideoURL", "video_url", "Video", "VideoLink", "video_link", "DemoVideo", "demo_video", "MediaURL", "media_url", "URL", "Link"));
     const name = toText(pick(c, "Name", "ComponentName", "component_name", "Title", "title", "Label"));
-    const desc = toText(pick(c, "Description", "description", "ComponentDescription", "Details", "Text", "Prescription"));
-    const notes = toText(pick(c, "Comment", "Comments", "Notes", "CoachNotes", "coach_notes", "AthleteNotes"));
+    const desc = stripVideoUrls(toText(rawDesc));
+    const notes = stripVideoUrls(toText(rawNotes));
     const section = pick(c, "IsSection", "is_section", "SectionHeader");
-    return { name, text: desc, notes, section: section === true || section === "true" };
-  }).filter((c) => c.name || c.text || c.notes);
+    const part = { name, text: desc, notes, section: section === true || section === "true" };
+    if (videos.length) part.videos = videos;
+    return part;
+  }).filter((c) => c.name || c.text || c.notes || c.videos);
 }
 
 /* Wodify's FormattedWOD is nested <div>s:
@@ -144,10 +200,12 @@ function parseFormatted(html) {
     let name = toText(kids[0]), score = "";
     const sm = /^(.*?)\s*\(([^()]+)\)\s*$/.exec(name);
     if (sm) { name = sm[1].trim(); score = sm[2].trim(); }
-    const body = kids[1];
-    const notes = topDivs(body).map(toText).filter(Boolean).join("\n\n");
-    const text = toText(stripTopDivs(body));
-    if (name || text) parts.push({ name, score, text, notes, section: false });
+    const videos = videosIn(b);
+    const notes = stripVideoUrls(topDivs(kids[1]).map(toText).filter(Boolean).join("\n\n"));
+    const text = stripVideoUrls(toText(stripTopDivs(kids[1])));
+    const part = { name, score, text, notes, section: false };
+    if (videos.length) part.videos = videos;
+    if (name || text || videos.length) parts.push(part);
   }
   return parts;
 }
@@ -250,4 +308,4 @@ module.exports = async function handler(req, res) {
   res.end(JSON.stringify(debug ? { date, programs, raw } : { date, programs }));
 };
 
-module.exports._test = { toText, cleanHtml, normComponents, gymDate, parseFormatted };
+module.exports._test = { toText, cleanHtml, normComponents, gymDate, parseFormatted, videosIn, stripVideoUrls };

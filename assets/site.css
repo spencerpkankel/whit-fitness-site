@@ -900,6 +900,23 @@ body:has(.mobile-nav[data-open="true"]) .wb-buddy { display: none; }
 .wod-coach-body { display: none; }
 .wod-coach.is-open .wod-coach-body { display: block; }
 .wod-part.is-section h3 { font-size: 1.25rem; color: var(--muted); }
+.wod-parts { grid-template-columns: minmax(0, 1fr); }
+.wod-part { min-width: 0; }
+/* demo videos: same card as coach notes; players scroll sideways */
+.wod-vids { min-width: 0; margin: 0.75rem 0 0 2.6rem; padding: 0.7rem 0.9rem; border-left: 3px solid var(--lime); background: var(--sage); border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: 0.98rem; }
+.wod-vids b { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.wod-vids-n { display: inline-grid; place-items: center; min-width: 1.4em; height: 1.4em; padding: 0 0.3em; border-radius: 999px; background: var(--ink); color: var(--lime); font-size: 0.85em; letter-spacing: 0; }
+.wod-vids > button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.wod-vids > button:focus-visible { outline: 3px solid var(--forest); outline-offset: 2px; }
+.wod-vids.is-open .wod-coach-i::before { content: "−"; }
+.wod-vids-body { margin-top: 0.6rem; }
+.wod-vids-strip { display: flex; gap: 0.75rem; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; padding-bottom: 0.5rem; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.wod-vids-strip:focus-visible { outline: 3px solid var(--forest); outline-offset: 2px; }
+.wod-vid { flex: 0 0 min(20rem, 85%); margin: 0; scroll-snap-align: start; }
+.wod-vids-strip > .wod-vid:only-child { flex-basis: min(28rem, 100%); }
+.wod-vid-frame { position: relative; aspect-ratio: 16 / 9; border-radius: var(--r-sm); overflow: hidden; background: var(--ink); }
+.wod-vid-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.wod-vid figcaption { margin-top: 0.35rem; font-size: 0.88rem; font-weight: 600; color: var(--ink); }
 .wod-html { line-height: 1.65; }
 .wod-html p { max-width: none; }
 .wod-missing { font-size: 1.1rem; }
@@ -919,6 +936,7 @@ body:has(.mobile-nav[data-open="true"]) .wb-buddy { display: none; }
   .wod-card { order: 1; min-height: 0; }
   .wod-text { padding-left: 0; }
   .wod-coach { margin-left: 0; }
+  .wod-vids { margin-left: 0; }
 }
 .wod-classes .wod-c { background: transparent; border: 0; padding: 0; margin: 0; }
 
@@ -1039,7 +1057,14 @@ body.tv .wod-parts.has-focus { align-items: stretch; }
 body.tv .wod-part.is-collapsed { background: #1b241e; border-radius: 1.4vh; padding: 2vh 1vw; display: flex; flex-direction: column; justify-content: center; }
 body.tv .wod-part.is-collapsed h3 { font-size: 2.8vh; flex-direction: column; align-items: flex-start; gap: 1vh; margin: 0; color: #c9d3cb; }
 body.tv .wod-part.is-collapsed .wod-score { margin-left: 0; font-size: 1.6vh; }
-body.tv .wod-part.is-collapsed .wod-text, body.tv .wod-part.is-collapsed .wod-coach { display: none; }
+body.tv .wod-part.is-collapsed .wod-text, body.tv .wod-part.is-collapsed .wod-coach, body.tv .wod-part.is-collapsed .wod-vids { display: none; }
+body.tv .wod-vids { margin: 0.5em 0 0; padding: 0; font-size: 0.8em; background: rgba(238,242,236,.07); border-left-color: var(--lime); }
+body.tv .wod-vids > button { padding: 0.4em 0.8em; font-size: 0.75em; }
+body.tv .wod-vids b { color: #b9c6bb; font-size: 0.85em; }
+body.tv .wod-vids.is-open .wod-coach-i::before { content: "− Hide"; }
+body.tv .wod-vids-body { margin: 0; padding: 0 0.9em 0.6em; }
+body.tv .wod-vid { flex-basis: min(16em, 85%); }
+body.tv .wod-vid figcaption { color: #dfe7dc; font-size: 0.8em; }
 body.tv .tv-p { display: block; }
 body.tv .tv-p + .tv-p { margin-top: 0.4em; }
 body.tv .wod-html, body.tv .wod-missing { color: #f4f7f2; }
