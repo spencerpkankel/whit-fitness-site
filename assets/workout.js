@@ -333,6 +333,40 @@
     return { text: m, notes: n };
   }
 
+  /* A library lift keeps its whole prescription in Wodify's comment field, so it arrived as one big
+     "Coach notes" box. Show that text as the part itself, and start a new lettered part at each
+     standalone "Then:" line (Snatch ... Then: 3 Sets of 3 Snatch Pull -> A Snatch, B Snatch Pull).
+     Metcon text (the description field) is never split. */
+  var SCHEME = /^(\d|every\b|emom\b|e\d|amrap\b|for time\b|rounds?\b|sets?\b|rest\b|min\b|x\s*\d|\(|-|\*)/i;
+  function partName(t) {
+    var lines = t.split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+    for (var i = 0; i < lines.length; i++) {
+      if (SCHEME.test(lines[i])) continue;
+      var nm = lines[i].replace(/\s*[@(].*$/, "").replace(/\s+x\s*\d.*$/i, "").replace(/[:.,]+$/, "").trim();
+      if (nm && nm.length <= 40) return nm;
+    }
+    return "Then";
+  }
+  function expandParts(list) {
+    var out = [];
+    (list || []).forEach(function (p) {
+      if (p.section || String(p.text || "").trim() || !String(p.notes || "").trim()) { out.push(p); return; }
+      var lines = String(p.notes).split("\n");
+      while (lines.length && !lines[0].trim()) lines.shift();
+      if (p.name && lines.length && lines[0].trim().toLowerCase() === p.name.trim().toLowerCase()) lines.shift();
+      var chunks = [[]];
+      lines.forEach(function (l) { if (/^\s*then\s*:?\s*$/i.test(l)) chunks.push([]); else chunks[chunks.length - 1].push(l); });
+      chunks = chunks.map(function (c) { return c.join("\n").trim(); }).filter(Boolean);
+      if (!chunks.length) { out.push(p); return; }
+      chunks.forEach(function (t, i) {
+        var q = { name: i === 0 ? p.name : partName(t), text: t, notes: "", section: false };
+        if (i === 0) { if (p.score) q.score = p.score; if (p.videos) q.videos = p.videos; }
+        out.push(q);
+      });
+    });
+    return out;
+  }
+
   // Demo videos: a tucked-away card like the coach notes. Players only exist while it's open,
   // so a closed card costs nothing (matters on the TVs).
   function videosHtml(list, i) {
@@ -355,9 +389,10 @@
   function workoutHtml(w) {
     var out = "";
     if (w.notes) out += '<p class="wod-notes">' + esc(w.notes) + "</p>";
-    if (w.components && w.components.length) {
-      var n = w.components.length, focus = TV && n > 1 && state.focus < n ? state.focus : -1;
-      out += '<ol class="wod-parts' + (focus > -1 ? " has-focus" : "") + '" data-n="' + n + '">' + w.components.map(function (p, i) {
+    var parts = expandParts(w.components);
+    if (parts.length) {
+      var n = parts.length, focus = TV && n > 1 && state.focus < n ? state.focus : -1;
+      out += '<ol class="wod-parts' + (focus > -1 ? " has-focus" : "") + '" data-n="' + n + '">' + parts.map(function (p, i) {
         var sp = splitCues(p.text, p.notes);
         var open = state.notesOpen[i] != null ? state.notesOpen[i] : !TV;   // TVs start with notes tucked away
         var cls = "wod-part" + (p.section ? " is-section" : "") + (focus === i ? " is-focus" : focus > -1 ? " is-collapsed" : "");
